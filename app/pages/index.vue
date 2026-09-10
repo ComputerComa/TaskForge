@@ -16,45 +16,16 @@ async function onCreated() {
 </script>
 
 <template>
-  <div class="page">
-    <div class="header">
-      <h1>Dashboard</h1>
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-xl font-semibold text-default">Dashboard</h1>
       <ProjectWizard @created="onCreated" />
     </div>
 
-    <p v-if="pending" class="muted">Loading...</p>
-    <p v-else-if="!projects?.length" class="muted">No projects yet. Create one to get started.</p>
-    <div v-else class="grid">
+    <p v-if="pending" class="text-sm text-muted">Loading...</p>
+    <p v-else-if="!projects?.length" class="text-sm text-muted">No projects yet. Create one to get started.</p>
+    <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       <ProjectCard v-for="project in projects" :key="project.id" :project="project" />
     </div>
   </div>
 </template>
-
-<style scoped>
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-h1 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-  gap: 0.75rem;
-}
-
-.muted {
-  color: var(--text-muted);
-}
-</style>

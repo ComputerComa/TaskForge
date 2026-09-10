@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import BlockedBadge from './BlockedBadge.vue'
 import StatusSummary from './StatusSummary.vue'
+import type { ProjectStatus } from '~~/shared/schemas/project.schema'
 import type { ProjectSummary } from '~~/shared/types/entities'
 
 defineProps<{ project: ProjectSummary }>()
+
+const statusColor: Record<ProjectStatus, 'primary' | 'success' | 'warning' | 'neutral'> = {
+  active: 'primary',
+  on_hold: 'warning',
+  done: 'success',
+  archived: 'neutral',
+}
 
 function formatEventDate(value: string | null) {
   if (!value) return null
@@ -12,103 +20,44 @@ function formatEventDate(value: string | null) {
 </script>
 
 <template>
-  <NuxtLink :to="`/projects/${project.id}`" class="card">
-    <div class="top">
-      <span class="name">{{ project.name }}</span>
-      <span class="status" :class="`status-${project.status}`">{{ project.status.replace('_', ' ') }}</span>
-    </div>
-    <BlockedBadge :blockers="project.blockers" />
-    <p v-if="project.description" class="description">{{ project.description }}</p>
+  <NuxtLink :to="`/projects/${project.id}`" class="block h-full">
+    <UCard
+      variant="outline"
+      class="h-full transition hover:shadow-md hover:ring-primary"
+      :ui="{ body: 'flex flex-col gap-3' }"
+    >
+      <div class="flex items-start justify-between gap-2">
+        <h2 class="truncate font-semibold text-default">{{ project.name }}</h2>
+        <UBadge
+          :label="project.status.replace('_', ' ')"
+          :color="statusColor[project.status]"
+          variant="subtle"
+          size="sm"
+          class="shrink-0 capitalize"
+        />
+      </div>
 
-    <StatusSummary :summary="project.statusSummary" />
+      <BlockedBadge :blockers="project.blockers" />
 
-    <div v-if="project.upcomingEvents.length > 0" class="events">
-      <span
-        v-for="event in project.upcomingEvents"
-        :key="event.id"
-        class="event"
-      >
-        <span v-if="formatEventDate(event.expectedAt)" class="event-date">{{ formatEventDate(event.expectedAt) }}</span>
-        {{ event.title }}
-      </span>
-    </div>
+      <p v-if="project.description" class="line-clamp-2 text-sm text-muted">
+        {{ project.description }}
+      </p>
+
+      <StatusSummary :summary="project.statusSummary" />
+
+      <div v-if="project.upcomingEvents.length > 0" class="flex flex-col gap-1 border-t border-default pt-2">
+        <div
+          v-for="event in project.upcomingEvents"
+          :key="event.id"
+          class="flex items-center gap-1.5 text-xs text-muted"
+        >
+          <UIcon name="i-lucide-calendar" class="size-3.5 shrink-0" />
+          <span v-if="formatEventDate(event.expectedAt)" class="shrink-0 font-medium tabular-nums text-default">
+            {{ formatEventDate(event.expectedAt) }}
+          </span>
+          <span class="truncate">{{ event.title }}</span>
+        </div>
+      </div>
+    </UCard>
   </NuxtLink>
 </template>
-
-<style scoped>
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  text-decoration: none;
-  color: var(--text);
-  background: var(--surface);
-}
-
-.card:hover {
-  border-color: var(--accent);
-}
-
-.top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.name {
-  font-weight: 600;
-}
-
-.status {
-  font-size: 0.75rem;
-  text-transform: capitalize;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.status-done {
-  color: #2f9e44;
-}
-
-.status-on_hold {
-  color: #e08e0b;
-}
-
-.status-archived {
-  color: var(--text-muted);
-}
-
-.description {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.events {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  margin-top: 0.15rem;
-}
-
-.event {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.event-date {
-  font-variant-numeric: tabular-nums;
-  color: var(--accent);
-  margin-right: 0.4rem;
-}
-</style>
