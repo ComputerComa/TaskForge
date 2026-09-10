@@ -29,16 +29,14 @@ async function submit() {
 <template>
   <form class="login-card" @submit.prevent="submit">
     <h1>TaskForge</h1>
-    <label>
-      Username
-      <input v-model="username" type="text" autocomplete="username" required autofocus />
-    </label>
-    <label>
-      Password
-      <input v-model="password" type="password" autocomplete="current-password" required />
-    </label>
+    <UFormField label="Username">
+      <UInput v-model="username" type="text" autocomplete="username" required autofocus class="w-full" />
+    </UFormField>
+    <UFormField label="Password">
+      <UInput v-model="password" type="password" autocomplete="current-password" required class="w-full" />
+    </UFormField>
     <p v-if="error" class="error">{{ error }}</p>
-    <button type="submit" :disabled="submitting">{{ submitting ? 'Signing in…' : 'Sign in' }}</button>
+    <UButton type="submit" block :loading="submitting" :label="submitting ? 'Signing in...' : 'Sign in'" />
   </form>
 </template>
 
@@ -57,36 +55,6 @@ async function submit() {
 h1 {
   margin: 0 0 0.25rem;
   font-size: 1.1rem;
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-input {
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg);
-}
-
-button {
-  margin-top: 0.25rem;
-  padding: 0.5rem;
-  border: none;
-  border-radius: 4px;
-  background: var(--accent);
-  color: white;
-  cursor: pointer;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: default;
 }
 
 .error {

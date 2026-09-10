@@ -44,19 +44,25 @@ function remove() {
 <template>
   <div v-show="visible" :id="`task-${task.id}`" class="task" :class="{ done: task.status === 'done', current: isCurrent }">
     <div class="row">
-      <input type="checkbox" :checked="task.status === 'done'" @change="toggleDone" />
+      <UCheckbox :model-value="task.status === 'done'" @update:model-value="toggleDone" />
       <InlineTextField class="title" :model-value="task.title" @save="value => save('title', value)" />
       <span v-if="isCurrent" class="badge current">up next</span>
       <BlockedBadge :blockers="task.blockers" />
       <div class="spacer" />
-      <button type="button" class="text-button" :title="detailsOpen ? 'Hide details' : 'Show details'" @click="detailsOpen = !detailsOpen">
-        {{ detailsOpen ? 'details -' : 'details +' }}
-      </button>
+      <UButton
+        :icon="detailsOpen ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+        label="Details"
+        :title="detailsOpen ? 'Hide details' : 'Show details'"
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        @click="detailsOpen = !detailsOpen"
+      />
       <div class="reorder">
-        <button type="button" :disabled="!canMoveUp" title="Move up" @click="$emit('move-up')">^</button>
-        <button type="button" :disabled="!canMoveDown" title="Move down" @click="$emit('move-down')">v</button>
+        <UButton icon="i-lucide-chevron-up" title="Move up" color="neutral" variant="ghost" size="xs" square :disabled="!canMoveUp" @click="$emit('move-up')" />
+        <UButton icon="i-lucide-chevron-down" title="Move down" color="neutral" variant="ghost" size="xs" square :disabled="!canMoveDown" @click="$emit('move-down')" />
       </div>
-      <button type="button" class="danger" @click="remove">Delete</button>
+      <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="xs" square title="Delete" @click="remove" />
     </div>
 
     <div v-if="detailsOpen" class="details">
@@ -124,55 +130,10 @@ function remove() {
   color: var(--accent);
 }
 
-.text-button {
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 0.7rem;
-  padding: 0.1rem 0.2rem;
-  white-space: nowrap;
-}
-
-.text-button:hover {
-  color: var(--text);
-}
-
 .reorder {
   display: flex;
   flex-direction: column;
   gap: 0.05rem;
-}
-
-.reorder button {
-  line-height: 1;
-  padding: 0 0.2rem;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  cursor: pointer;
-  font-size: 0.65rem;
-  color: var(--text-muted);
-}
-
-.reorder button:hover:not(:disabled) {
-  color: var(--text);
-}
-
-.reorder button:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-.danger {
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 0.75rem;
-}
-
-.danger:hover {
-  color: var(--danger);
 }
 
 .details {

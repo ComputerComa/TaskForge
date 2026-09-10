@@ -23,7 +23,7 @@ const { tree, pending, error } = treeApi
 
 <template>
   <div class="page">
-    <NuxtLink to="/" class="back">&lt;- Projects</NuxtLink>
+    <UButton to="/" label="Projects" icon="i-lucide-arrow-left" color="neutral" variant="link" size="sm" class="back" />
 
     <p v-if="pending" class="muted">Loading...</p>
     <p v-else-if="error" class="muted">Could not load this project.</p>
@@ -50,10 +50,8 @@ const { tree, pending, error } = treeApi
 }
 
 .back {
-  font-size: 0.8rem;
-  text-decoration: none;
-  color: var(--text-muted);
   margin-bottom: 0.5rem;
+  align-self: flex-start;
 }
 
 .muted {

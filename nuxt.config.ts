@@ -3,7 +3,9 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
-  modules: ['nuxt-auth-utils', '@vueuse/nuxt'],
+  modules: ['nuxt-auth-utils', '@vueuse/nuxt', '@nuxt/ui'],
+
+  css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
     // NUXT_DATABASE_PATH

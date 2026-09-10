@@ -22,6 +22,8 @@ const scopeOptions = computed(() => [
   ),
 ])
 
+const typeOptions = eventTypes.map(type => ({ value: type, label: eventTypeMeta[type].label }))
+
 async function addEvent() {
   const title = newTitle.value.trim()
   if (!title) return
@@ -49,15 +51,11 @@ async function addEvent() {
     </div>
 
     <form class="add-event" @submit.prevent="addEvent">
-      <select v-model="newScope">
-        <option v-for="option in scopeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-      </select>
-      <select v-model="newType">
-        <option v-for="type in eventTypes" :key="type" :value="type">{{ eventTypeMeta[type].label }}</option>
-      </select>
-      <input type="date" v-model="newDate" />
-      <input v-model="newTitle" placeholder="New event (e.g. SSDs expected to arrive)" class="title" />
-      <button type="submit">Add event</button>
+      <USelect v-model="newScope" :items="scopeOptions" class="min-w-40" />
+      <USelect v-model="newType" :items="typeOptions" class="min-w-32" />
+      <UInput v-model="newDate" type="date" />
+      <UInput v-model="newTitle" placeholder="New event (e.g. SSDs expected to arrive)" class="title" />
+      <UButton type="submit" label="Add event" color="neutral" variant="outline" />
     </form>
   </section>
 </template>
@@ -95,21 +93,5 @@ h2 {
 .add-event .title {
   flex: 1;
   min-width: 10rem;
-}
-
-.add-event input,
-.add-event select {
-  padding: 0.3rem 0.45rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-}
-
-.add-event button {
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  cursor: pointer;
 }
 </style>

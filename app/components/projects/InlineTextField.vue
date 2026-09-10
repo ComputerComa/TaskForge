@@ -12,12 +12,12 @@ const emit = defineEmits<{ save: [value: string] }>()
 
 const editing = ref(false)
 const draft = ref(props.modelValue)
-const inputRef = ref<HTMLInputElement | HTMLTextAreaElement>()
+const fieldRef = ref<{ inputRef?: HTMLInputElement | null; textareaRef?: HTMLTextAreaElement | null }>()
 
 function startEdit() {
   draft.value = props.modelValue
   editing.value = true
-  nextTick(() => inputRef.value?.focus())
+  nextTick(() => (fieldRef.value?.inputRef ?? fieldRef.value?.textareaRef)?.focus())
 }
 
 function commit() {
@@ -33,19 +33,23 @@ function cancel() {
 </script>
 
 <template>
-  <textarea
+  <UTextarea
     v-if="editing && multiline"
-    ref="inputRef"
+    ref="fieldRef"
     v-model="draft"
-    rows="3"
+    :rows="3"
+    autoresize
+    size="sm"
+    class="w-full"
     @blur="commit"
     @keydown.esc="cancel"
   />
-  <input
+  <UInput
     v-else-if="editing"
-    ref="inputRef"
+    ref="fieldRef"
     v-model="draft"
-    type="text"
+    size="sm"
+    class="w-full"
     @blur="commit"
     @keydown.enter="commit"
     @keydown.esc="cancel"
@@ -68,14 +72,5 @@ function cancel() {
 .display.empty {
   color: var(--text-muted);
   font-style: italic;
-}
-
-input,
-textarea {
-  width: 100%;
-  padding: 0.2rem 0.35rem;
-  border: 1px solid var(--accent);
-  border-radius: 3px;
-  background: var(--surface);
 }
 </style>

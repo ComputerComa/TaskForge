@@ -13,7 +13,7 @@ async function logout() {
       <NuxtLink to="/" class="brand">TaskForge</NuxtLink>
       <div class="spacer" />
       <span v-if="user" class="username">{{ user.username }}</span>
-      <button type="button" class="link-button" @click="logout">Log out</button>
+      <UButton label="Log out" color="neutral" variant="link" size="sm" @click="logout" />
     </header>
     <main class="content">
       <slot />
@@ -116,19 +116,6 @@ a {
 .username {
   color: var(--text-muted);
   font-size: 0.85rem;
-}
-
-.link-button {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 0.85rem;
-  padding: 0.25rem 0.4rem;
-}
-
-.link-button:hover {
-  color: var(--text);
 }
 
 .content {

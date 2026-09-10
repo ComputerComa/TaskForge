@@ -67,19 +67,25 @@ function moveTask(index: number, direction: -1 | 1) {
 <template>
   <section v-show="visible" :id="`phase-${phase.id}`" class="phase">
     <div class="phase-header">
-      <button type="button" class="collapse" :title="collapsed ? 'Expand' : 'Collapse'" @click="uiApi.togglePhaseCollapsed(phase)">
-        {{ collapsed ? '>' : 'v' }}
-      </button>
+      <UButton
+        :icon="collapsed ? 'i-lucide-chevron-right' : 'i-lucide-chevron-down'"
+        :title="collapsed ? 'Expand' : 'Collapse'"
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        square
+        @click="uiApi.togglePhaseCollapsed(phase)"
+      />
       <InlineTextField class="name" :model-value="phase.name" @save="value => save('name', value)" />
       <StatusSelect :model-value="phase.status" :options="phaseStatuses" @update:model-value="saveStatus" />
       <span class="task-count">{{ doneCount }}/{{ phase.tasks.length }} done</span>
       <BlockedBadge :blockers="phase.blockers" />
       <div class="spacer" />
       <div class="reorder">
-        <button type="button" :disabled="!canMoveUp" title="Move up" @click="$emit('move-up')">^</button>
-        <button type="button" :disabled="!canMoveDown" title="Move down" @click="$emit('move-down')">v</button>
+        <UButton icon="i-lucide-chevron-up" title="Move up" color="neutral" variant="ghost" size="xs" square :disabled="!canMoveUp" @click="$emit('move-up')" />
+        <UButton icon="i-lucide-chevron-down" title="Move down" color="neutral" variant="ghost" size="xs" square :disabled="!canMoveDown" @click="$emit('move-down')" />
       </div>
-      <button type="button" class="danger" @click="remove">Delete</button>
+      <UButton icon="i-lucide-trash-2" label="Delete" color="error" variant="ghost" size="xs" @click="remove" />
     </div>
 
     <template v-if="!collapsed">
@@ -104,8 +110,8 @@ function moveTask(index: number, direction: -1 | 1) {
         />
 
         <form class="add-task" @submit.prevent="addTask">
-          <input v-model="newTaskTitle" placeholder="New task" class="title" />
-          <button type="submit">Add task</button>
+          <UInput v-model="newTaskTitle" placeholder="New task" class="title" size="sm" />
+          <UButton type="submit" label="Add task" color="neutral" variant="outline" size="sm" />
         </form>
       </div>
     </template>
@@ -127,21 +133,6 @@ function moveTask(index: number, direction: -1 | 1) {
   flex-wrap: wrap;
 }
 
-.collapse {
-  flex: none;
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 0.8rem;
-  padding: 0 0.2rem;
-  line-height: 1;
-}
-
-.collapse:hover {
-  color: var(--text);
-}
-
 .spacer {
   flex: 1;
 }
@@ -150,25 +141,6 @@ function moveTask(index: number, direction: -1 | 1) {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-}
-
-.reorder button {
-  line-height: 1;
-  padding: 0 0.25rem;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  cursor: pointer;
-  font-size: 0.65rem;
-  color: var(--text-muted);
-}
-
-.reorder button:hover:not(:disabled) {
-  color: var(--text);
-}
-
-.reorder button:disabled {
-  opacity: 0.3;
-  cursor: default;
 }
 
 .name {
@@ -189,19 +161,6 @@ function moveTask(index: number, direction: -1 | 1) {
   color: var(--text-muted);
 }
 
-.danger {
-  border: none;
-  color: var(--text-muted);
-  background: none;
-  cursor: pointer;
-  font-size: 0.75rem;
-  padding: 0.1rem 0.3rem;
-}
-
-.danger:hover {
-  color: var(--danger);
-}
-
 .tasks {
   margin-top: 0.6rem;
   margin-left: 1.4rem;
@@ -219,21 +178,6 @@ function moveTask(index: number, direction: -1 | 1) {
 
 .add-task .title {
   flex: 1;
-}
-
-.add-task input {
-  padding: 0.3rem 0.45rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg);
-}
-
-.add-task button {
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  cursor: pointer;
 }
 
 @media (max-width: 640px) {

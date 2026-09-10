@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@adonisjs/hash": "^9.1.1",
+    "@nuxt/ui": "^4.11.1",
     "better-sqlite3": "^13.0.3",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
@@ -25,6 +26,7 @@
     "zod": "^4.6.1"
   },
   "devDependencies": {
+    "@iconify-json/lucide": "^1.2.130",
     "@types/better-sqlite3": "^9.6.0",
     "@vueuse/core": "^14.4.0",
     "@vueuse/nuxt": "^14.4.0",

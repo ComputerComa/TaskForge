@@ -44,8 +44,8 @@ function move(index: number, direction: -1 | 1) {
     />
 
     <form class="add-phase" @submit.prevent="addPhase">
-      <input v-model="newPhaseName" placeholder="New phase name" />
-      <button type="submit">Add phase</button>
+      <UInput v-model="newPhaseName" placeholder="New phase name" class="flex-1" />
+      <UButton type="submit" label="Add phase" color="neutral" variant="outline" />
     </form>
   </div>
 </template>
@@ -62,19 +62,4 @@ function move(index: number, direction: -1 | 1) {
   gap: 0.5rem;
 }
 
-.add-phase input {
-  flex: 1;
-  padding: 0.35rem 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-}
-
-.add-phase button {
-  padding: 0.35rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  cursor: pointer;
-}
 </style>
