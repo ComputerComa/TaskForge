@@ -179,6 +179,11 @@ async function create() {
         method: 'POST',
         body: {
           projectId: project.id,
+          // Wizard-created events are always project-scoped -- attaching
+          // one to a specific phase/task is done later from the Events
+          // section, which has a proper scope picker.
+          scopeType: 'project',
+          scopeId: project.id,
           title: event.title,
           expectedAt: event.expectedAt || undefined,
         },

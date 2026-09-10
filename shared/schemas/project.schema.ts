@@ -15,7 +15,15 @@ export const createProjectSchema = z
   })
   .strict()
 
-export const updateProjectSchema = createProjectSchema.partial()
+// .extend() re-declares description/status without their .default() --
+// see the note in shared/schemas/common.ts on why that matters for PATCH.
+export const updateProjectSchema = createProjectSchema
+  .partial()
+  .extend({
+    description: z.string().optional(),
+    status: z.enum(projectStatuses).optional(),
+  })
+  .strict()
 
 // z.input (not z.infer/output) so fields with a .default() stay optional on
 // the client-side payload type -- the server fills them in on parse.

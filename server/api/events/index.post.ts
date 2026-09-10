@@ -5,6 +5,7 @@ import { events } from '~~/server/db/schema'
 export default defineEventHandler(async event => {
   await requireAuth(event)
   const body = await parseBody(createEventSchema, event)
+  assertValidEventScope(body.projectId, body.scopeType, body.scopeId)
 
   const db = useDb()
   const [created] = db.insert(events).values(body).returning().all()

@@ -71,6 +71,20 @@ textarea {
 a {
   color: var(--accent);
 }
+
+/* Briefly highlights an element jumped to from the event rail. */
+.flash-highlight {
+  animation: flash-highlight 1.4s ease-out;
+}
+
+@keyframes flash-highlight {
+  0% {
+    background-color: color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
 </style>
 
 <style scoped>

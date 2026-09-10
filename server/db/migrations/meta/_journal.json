@@ -8,6 +8,20 @@
       "when": 1789003877322,
       "tag": "0000_demonic_timeslip",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789006468302,
+      "tag": "0001_curly_albert_cleary",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789006491217,
+      "tag": "0002_legal_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }

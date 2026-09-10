@@ -67,19 +67,35 @@ export const tasks = sqliteTable('tasks', {
 
 // --- Events ---------------------------------------------------------------
 //
-// Dated external milestones a project is waiting on -- "SSDs expected to
-// arrive ~Oct 3" -- distinct from the task checklist. Surfaced on the
-// dashboard as "upcoming events".
+// Dated milestones, blockers, deliveries, decisions, maintenance windows,
+// and log notes -- distinct from the task checklist. An event is attached
+// to a project, phase, or task (scopeType/scopeId); a `blocker`-type event
+// blocks that same scope for as long as its status stays 'upcoming'. See
+// server/utils/db-helpers.ts -> isActiveBlocker.
 
 export const events = sqliteTable('events', {
   id: integer('id').primaryKey({ autoIncrement: true }),
+  // Denormalized owning project, for cheap "all events in this project"
+  // queries regardless of scope depth (mirrors tasks.projectId).
   projectId: integer('project_id')
     .notNull()
     .references(() => projects.id, { onDelete: 'cascade' }),
+  // project | phase | task -- what this event is attached to (and, for a
+  // blocker, what it blocks). scopeId is polymorphic (a phases.id or
+  // tasks.id depending on scopeType) so it isn't a DB-level foreign key;
+  // validated in the API layer instead (assertValidEventScope). When a
+  // phase or task is deleted, events scoped to it are demoted to project
+  // scope rather than orphaned -- see the phases/tasks DELETE handlers.
+  scopeType: text('scope_type').notNull().default('project'),
+  // Equals projectId when scopeType is 'project'.
+  scopeId: integer('scope_id').notNull(),
+  // milestone | blocker | delivery | decision | maintenance_window | note
+  type: text('type').notNull().default('milestone'),
   title: text('title').notNull(),
+  description: text('description'),
   expectedAt: integer('expected_at', { mode: 'timestamp_ms' }),
-  note: text('note'),
-  // upcoming | occurred | cancelled
+  // upcoming | occurred | cancelled -- for a blocker, "upcoming" means
+  // still actively blocking; "occurred" or "cancelled" clears the block.
   status: text('status').notNull().default('upcoming'),
   createdAt: timestamp('created_at'),
 })

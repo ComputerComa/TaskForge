@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { useDb } from '../db/client'
 import { events, phases, projects, tasks } from '../db/schema'
 import type { ProjectStatusSummary } from '~~/shared/types/entities'
@@ -12,6 +12,13 @@ function groupBy<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
     else map.set(k, [item])
   }
   return map
+}
+
+/** A `blocker`-type event blocks its scope for as long as it's 'upcoming'
+ * -- 'occurred' means the awaited condition happened (block lifted),
+ * 'cancelled' means it no longer applies. */
+export function isActiveBlocker(event: { type: string; status: string }): boolean {
+  return event.type === 'blocker' && event.status === 'upcoming'
 }
 
 /** Derives the "Phase 2: on task 3 of 9" progress summary from phase/task
@@ -78,19 +85,23 @@ export function fetchProjectSummaries() {
           tasks: tasksByPhase.get(phase.id) ?? [],
         })),
       )
-      const upcomingEvents = (eventsByProject.get(project.id) ?? [])
+      const projectEvents = eventsByProject.get(project.id) ?? []
+      const upcomingEvents = projectEvents
         .filter(event => event.status === 'upcoming')
         .sort((a, b) => (a.expectedAt?.getTime() ?? Infinity) - (b.expectedAt?.getTime() ?? Infinity))
         .slice(0, 3)
+      const blockers = projectEvents.filter(event => event.scopeType === 'project' && isActiveBlocker(event))
 
-      return { ...project, statusSummary, upcomingEvents }
+      return { ...project, statusSummary, upcomingEvents, blockers }
     })
     .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 }
 
-/** Full phase -> task tree for one project, plus its events and computed
- * status summary. Used by the Project Detail view. Returns null if the
- * project doesn't exist. */
+/** Full phase -> task tree for one project, plus its events, computed
+ * status summary, and active blockers (own scope plus inherited from any
+ * ancestor scope -- a project-level blocker blocks every phase and task,
+ * a phase-level blocker blocks all of that phase's tasks). Used by the
+ * Project Detail view. Returns null if the project doesn't exist. */
 export function fetchProjectTree(projectId: number) {
   const db = useDb()
   const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
@@ -119,16 +130,89 @@ export function fetchProjectTree(projectId: number) {
 
   const tasksByPhase = groupBy(projectTasks, task => task.phaseId)
 
-  const phaseNodes = projectPhases.map(phase => ({
-    ...phase,
-    tasks: tasksByPhase.get(phase.id) ?? [],
-  }))
+  const activeBlockers = projectEvents.filter(isActiveBlocker)
+  const projectBlockers = activeBlockers.filter(event => event.scopeType === 'project')
+  const phaseBlockersById = groupBy(
+    activeBlockers.filter(event => event.scopeType === 'phase'),
+    event => event.scopeId,
+  )
+  const taskBlockersById = groupBy(
+    activeBlockers.filter(event => event.scopeType === 'task'),
+    event => event.scopeId,
+  )
+
+  const phaseNodes = projectPhases.map(phase => {
+    const phaseBlockers = [...projectBlockers, ...(phaseBlockersById.get(phase.id) ?? [])]
+    const phaseTasks = (tasksByPhase.get(phase.id) ?? []).map(task => ({
+      ...task,
+      blockers: [...phaseBlockers, ...(taskBlockersById.get(task.id) ?? [])],
+    }))
+    return { ...phase, tasks: phaseTasks, blockers: phaseBlockers }
+  })
 
   const statusSummary = computeProjectStatus(
     phaseNodes.map(phase => ({ name: phase.name, status: phase.status, tasks: phase.tasks })),
   )
 
-  return { ...project, phases: phaseNodes, events: projectEvents, statusSummary }
+  return {
+    ...project,
+    phases: phaseNodes,
+    events: projectEvents,
+    statusSummary,
+    blockers: projectBlockers,
+  }
+}
+
+/** Throws a 400/404 H3Error if (scopeType, scopeId) isn't a valid target
+ * within `projectId` -- Zod alone can't check this since it needs the DB.
+ * Called from the events create/update handlers. */
+export function assertValidEventScope(projectId: number, scopeType: string, scopeId: number) {
+  const db = useDb()
+
+  if (scopeType === 'project') {
+    if (scopeId !== projectId) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'scopeId must equal projectId when scopeType is "project"',
+      })
+    }
+    return
+  }
+
+  if (scopeType === 'phase') {
+    const phase = db
+      .select({ id: phases.id })
+      .from(phases)
+      .where(and(eq(phases.id, scopeId), eq(phases.projectId, projectId)))
+      .get()
+    if (!phase) {
+      throw createError({ statusCode: 404, statusMessage: 'Phase not found in this project' })
+    }
+    return
+  }
+
+  if (scopeType === 'task') {
+    const task = db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(and(eq(tasks.id, scopeId), eq(tasks.projectId, projectId)))
+      .get()
+    if (!task) {
+      throw createError({ statusCode: 404, statusMessage: 'Task not found in this project' })
+    }
+  }
+}
+
+/** Events scoped to a phase or task that's about to be deleted would
+ * otherwise be orphaned (their scopeId would point at nothing) -- demote
+ * them to project scope instead of losing them. Called before deleting a
+ * phase (which cascades its tasks) or a task. */
+export function demoteEventScope(projectId: number, scopeType: 'phase' | 'task', scopeId: number) {
+  const db = useDb()
+  db.update(events)
+    .set({ scopeType: 'project', scopeId: projectId })
+    .where(and(eq(events.scopeType, scopeType), eq(events.scopeId, scopeId)))
+    .run()
 }
 
 export function nextPosition(rows: { position: number }[]): number {

@@ -1,26 +1,40 @@
 <script setup lang="ts">
 import { phaseStatuses } from '~~/shared/schemas/phase.schema'
 import { projectTreeKey } from '~/composables/useProjectTree'
+import { isPhaseVisible, projectUiKey } from '~/composables/useProjectDetailUi'
+import BlockedBadge from './BlockedBadge.vue'
 import InlineTextField from './InlineTextField.vue'
 import StatusSelect from './StatusSelect.vue'
 import TaskNode from './TaskNode.vue'
 import type { PhaseNode as PhaseNodeType } from '~~/shared/types/entities'
 
-const { phase, canMoveUp, canMoveDown } = defineProps<{
+const { phase, isCurrentPhase, canMoveUp, canMoveDown } = defineProps<{
   phase: PhaseNodeType
+  // Whether this is the project's current phase (the first, in order,
+  // that isn't done) -- only it can have an "up next" task; every later
+  // phase is waiting on it regardless of its own tasks' statuses.
+  isCurrentPhase: boolean
   canMoveUp: boolean
   canMoveDown: boolean
 }>()
 defineEmits<{ 'move-up': []; 'move-down': [] }>()
 
 const treeApi = inject(projectTreeKey)!
+const uiApi = inject(projectUiKey)!
 
 const newTaskTitle = ref('')
 
 // Tasks block sequentially by position: the "current" one is the first
-// that isn't done yet -- everything after it is implicitly waiting.
-const firstPendingIndex = computed(() => phase.tasks.findIndex(task => task.status !== 'done'))
+// that isn't done yet -- everything after it is implicitly waiting. But
+// that only applies within the project's current phase; a later phase's
+// first task isn't "next" until every phase before it is done.
+const firstPendingIndex = computed(() =>
+  isCurrentPhase ? phase.tasks.findIndex(task => task.status !== 'done') : -1,
+)
 const doneCount = computed(() => phase.tasks.filter(task => task.status === 'done').length)
+
+const visible = computed(() => isPhaseVisible(phase, uiApi.filters))
+const collapsed = computed(() => uiApi.isPhaseCollapsed(phase))
 
 function save(field: 'name' | 'description', value: string) {
   treeApi.updatePhase(phase.id, { [field]: value })
@@ -51,42 +65,50 @@ function moveTask(index: number, direction: -1 | 1) {
 </script>
 
 <template>
-  <section class="phase">
+  <section v-show="visible" :id="`phase-${phase.id}`" class="phase">
     <div class="phase-header">
+      <button type="button" class="collapse" :title="collapsed ? 'Expand' : 'Collapse'" @click="uiApi.togglePhaseCollapsed(phase)">
+        {{ collapsed ? '>' : 'v' }}
+      </button>
+      <InlineTextField class="name" :model-value="phase.name" @save="value => save('name', value)" />
+      <StatusSelect :model-value="phase.status" :options="phaseStatuses" @update:model-value="saveStatus" />
+      <span class="task-count">{{ doneCount }}/{{ phase.tasks.length }} done</span>
+      <BlockedBadge :blockers="phase.blockers" />
+      <div class="spacer" />
       <div class="reorder">
         <button type="button" :disabled="!canMoveUp" title="Move up" @click="$emit('move-up')">^</button>
         <button type="button" :disabled="!canMoveDown" title="Move down" @click="$emit('move-down')">v</button>
       </div>
-      <InlineTextField class="name" :model-value="phase.name" @save="value => save('name', value)" />
-      <StatusSelect :model-value="phase.status" :options="phaseStatuses" @update:model-value="saveStatus" />
-      <span class="task-count">{{ doneCount }}/{{ phase.tasks.length }} done</span>
       <button type="button" class="danger" @click="remove">Delete</button>
     </div>
-    <InlineTextField
-      class="description"
-      multiline
-      placeholder="Add a description..."
-      :model-value="phase.description"
-      @save="value => save('description', value)"
-    />
 
-    <div class="tasks">
-      <TaskNode
-        v-for="(task, index) in phase.tasks"
-        :key="task.id"
-        :task="task"
-        :is-current="index === firstPendingIndex"
-        :can-move-up="index > 0"
-        :can-move-down="index < phase.tasks.length - 1"
-        @move-up="moveTask(index, -1)"
-        @move-down="moveTask(index, 1)"
+    <template v-if="!collapsed">
+      <InlineTextField
+        class="description"
+        multiline
+        placeholder="Add a description..."
+        :model-value="phase.description"
+        @save="value => save('description', value)"
       />
 
-      <form class="add-task" @submit.prevent="addTask">
-        <input v-model="newTaskTitle" placeholder="New task" class="title" />
-        <button type="submit">Add task</button>
-      </form>
-    </div>
+      <div class="tasks">
+        <TaskNode
+          v-for="(task, index) in phase.tasks"
+          :key="task.id"
+          :task="task"
+          :is-current="index === firstPendingIndex"
+          :can-move-up="index > 0"
+          :can-move-down="index < phase.tasks.length - 1"
+          @move-up="moveTask(index, -1)"
+          @move-down="moveTask(index, 1)"
+        />
+
+        <form class="add-task" @submit.prevent="addTask">
+          <input v-model="newTaskTitle" placeholder="New task" class="title" />
+          <button type="submit">Add task</button>
+        </form>
+      </div>
+    </template>
   </section>
 </template>
 
@@ -94,15 +116,34 @@ function moveTask(index: number, direction: -1 | 1) {
 .phase {
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 0.75rem;
+  padding: 0.6rem 0.75rem;
   background: var(--surface);
 }
 
 .phase-header {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.collapse {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0 0.2rem;
+  line-height: 1;
+}
+
+.collapse:hover {
+  color: var(--text);
+}
+
+.spacer {
+  flex: 1;
 }
 
 .reorder {
@@ -117,7 +158,12 @@ function moveTask(index: number, direction: -1 | 1) {
   border: 1px solid var(--border);
   background: var(--bg);
   cursor: pointer;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.reorder button:hover:not(:disabled) {
+  color: var(--text);
 }
 
 .reorder button:disabled {
@@ -132,33 +178,38 @@ function moveTask(index: number, direction: -1 | 1) {
 .task-count {
   color: var(--text-muted);
   font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 .description {
   display: block;
   margin-top: 0.35rem;
+  margin-left: 1.4rem;
   font-size: 0.85rem;
   color: var(--text-muted);
 }
 
 .danger {
-  margin-left: auto;
-  border: 1px solid var(--danger);
-  color: var(--danger);
+  border: none;
+  color: var(--text-muted);
   background: none;
-  border-radius: 4px;
-  padding: 0.2rem 0.5rem;
   cursor: pointer;
   font-size: 0.75rem;
+  padding: 0.1rem 0.3rem;
+}
+
+.danger:hover {
+  color: var(--danger);
 }
 
 .tasks {
   margin-top: 0.6rem;
+  margin-left: 1.4rem;
   padding-left: 1rem;
   border-left: 2px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .add-task {
@@ -183,5 +234,16 @@ function moveTask(index: number, direction: -1 | 1) {
   border-radius: 4px;
   background: var(--surface);
   cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .phase-header {
+    gap: 0.4rem;
+  }
+
+  .spacer {
+    flex-basis: 100%;
+    height: 0;
+  }
 }
 </style>

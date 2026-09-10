@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BlockedBadge from './BlockedBadge.vue'
 import StatusSummary from './StatusSummary.vue'
 import type { ProjectSummary } from '~~/shared/types/entities'
 
@@ -16,6 +17,7 @@ function formatEventDate(value: string | null) {
       <span class="name">{{ project.name }}</span>
       <span class="status" :class="`status-${project.status}`">{{ project.status.replace('_', ' ') }}</span>
     </div>
+    <BlockedBadge :blockers="project.blockers" />
     <p v-if="project.description" class="description">{{ project.description }}</p>
 
     <StatusSummary :summary="project.statusSummary" />

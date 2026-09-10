@@ -9,9 +9,18 @@ export default defineEventHandler(async event => {
   const body = await parseBody(updateEventSchema, event)
 
   const db = useDb()
-  const [updated] = db.update(events).set(body).where(eq(events.id, id)).returning().all()
-  if (!updated) {
+  const existing = db.select().from(events).where(eq(events.id, id)).get()
+  if (!existing) {
     throw createError({ statusCode: 404, statusMessage: 'Event not found' })
   }
+
+  // Validate the resulting scope, not just whichever half of it changed --
+  // e.g. changing only scopeId while scopeType stays 'phase' still needs
+  // to be checked against the new id.
+  const scopeType = body.scopeType ?? existing.scopeType
+  const scopeId = body.scopeId ?? existing.scopeId
+  assertValidEventScope(existing.projectId, scopeType, scopeId)
+
+  const [updated] = db.update(events).set(body).where(eq(events.id, id)).returning().all()
   return updated
 })

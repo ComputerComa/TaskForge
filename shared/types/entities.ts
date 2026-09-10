@@ -1,4 +1,4 @@
-import type { EventStatus } from '../schemas/event.schema'
+import type { EventScopeType, EventStatus, EventType } from '../schemas/event.schema'
 import type { PhaseStatus } from '../schemas/phase.schema'
 import type { ProjectStatus } from '../schemas/project.schema'
 import type { TaskStatus } from '../schemas/task.schema'
@@ -21,9 +21,12 @@ export interface ProjectStatusSummary {
 export interface EventSummary {
   id: number
   projectId: number
+  scopeType: EventScopeType
+  scopeId: number
+  type: EventType
   title: string
+  description: string | null
   expectedAt: string | null
-  note: string | null
   status: EventStatus
 }
 
@@ -37,6 +40,8 @@ export interface ProjectSummary {
   updatedAt: string
   statusSummary: ProjectStatusSummary
   upcomingEvents: EventSummary[]
+  // Active blocker events scoped directly to the project (not phases/tasks).
+  blockers: EventSummary[]
 }
 
 export interface TaskNode {
@@ -50,6 +55,9 @@ export interface TaskNode {
   command: string | null
   notes: string | null
   link: string | null
+  // Active blocker events affecting this task, own scope plus inherited
+  // from its phase and project (see db-helpers.ts -> fetchProjectTree).
+  blockers: EventSummary[]
 }
 
 export interface PhaseNode {
@@ -60,6 +68,9 @@ export interface PhaseNode {
   position: number
   status: PhaseStatus
   tasks: TaskNode[]
+  // Active blocker events affecting this phase, own scope plus inherited
+  // from the project.
+  blockers: EventSummary[]
 }
 
 export interface ProjectTree {
@@ -73,4 +84,6 @@ export interface ProjectTree {
   phases: PhaseNode[]
   events: EventSummary[]
   statusSummary: ProjectStatusSummary
+  // Active blocker events scoped directly to the project.
+  blockers: EventSummary[]
 }

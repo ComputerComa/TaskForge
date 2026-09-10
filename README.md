@@ -39,7 +39,13 @@ and it no-ops if a user already exists.
 Auth (local username/password, session cookie), full CRUD for
 projects/phases/tasks/events, a computed status/progress summary derived
 from task completion, a dashboard of project cards, a guided modal wizard
-for creating new projects, and a project detail page (phases -> tasks as
-an inline-editable ordered checklist, plus an events section). No
-drag-and-drop or search/filtering yet -- see `overview.md`'s
-"Implementation Phases" and "Open Questions" for what's still open.
+for creating new projects, and a project detail page: collapsible phases,
+an ordered task checklist with details collapsed by default, filter
+toggles (hide blocked / actionable only / show completed), an event rail
+near the top for scanning and jumping to what an event affects, and an
+events section supporting six event types (milestone, blocker, delivery,
+decision, maintenance window, note) scoped to a project, phase, or task --
+a `blocker`-type event blocks its scope (and cascades down to phases/tasks
+under it) until it's marked occurred or cancelled. No drag-and-drop or
+search/filtering yet -- see `todo.md`'s "Implementation Phases" and
+"Open Questions" for what's still open.
