@@ -1,15 +1,15 @@
 import { eq } from 'drizzle-orm'
 import { useDb } from '~~/server/db/client'
-import { taskDependencies } from '~~/server/db/schema'
+import { events } from '~~/server/db/schema'
 
 export default defineEventHandler(async event => {
   await requireAuth(event)
   const id = parseIdParam(event)
 
   const db = useDb()
-  const [deleted] = db.delete(taskDependencies).where(eq(taskDependencies.id, id)).returning().all()
+  const [deleted] = db.delete(events).where(eq(events.id, id)).returning().all()
   if (!deleted) {
-    throw createError({ statusCode: 404, statusMessage: 'Dependency not found' })
+    throw createError({ statusCode: 404, statusMessage: 'Event not found' })
   }
   setResponseStatus(event, 204)
   return null

@@ -1,10 +1,13 @@
 # TaskForge
 
-A standalone, self-hosted homelab project planner. Project -> Phase -> Task
--> Step, with task dependencies. It's a personal-oriented tool with no
+A standalone, self-hosted personal project tracker. Project -> Phase ->
+Task, with phases and tasks blocking purely by sequential order (no
+dependency graph), plus a separate Events list for dated external
+milestones (deliveries, maintenance windows). A dashboard of project cards
+shows each project's computed status ("Phase 2: on task 3 of 6"), progress,
+and upcoming events at a glance. It's a personal-oriented tool with no
 dependency on or sync with any external project tracker. See `overview.md`
-for the full design and the longer-term roadmap (more views, polish) beyond
-this first slice.
+for the full design and roadmap.
 
 ## Setup
 
@@ -12,7 +15,7 @@ this first slice.
 npm install
 cp .env.example .env
 # Edit .env: set NUXT_SESSION_PASSWORD (32+ chars, e.g. `openssl rand -base64 32`)
-# and ADMIN_USERNAME / ADMIN_PASSWORD for the one local account this slice supports.
+# and ADMIN_USERNAME / ADMIN_PASSWORD for the one local account this app supports.
 
 npm run db:migrate
 npm run db:seed   # creates the admin user from .env -- idempotent, safe to re-run
@@ -31,11 +34,12 @@ and it no-ops if a user already exists.
 - `npm run db:seed` -- create the admin user from `ADMIN_USERNAME`/`ADMIN_PASSWORD`.
 - `npm run typecheck` -- `nuxt typecheck` across the whole app.
 
-## What's in this slice
+## What's built
 
 Auth (local username/password, session cookie), full CRUD for
-projects/phases/tasks/steps, task dependencies with cycle prevention and a
-"blocked" indicator, a project list, and a single combined project detail
-view (phases -> tasks -> steps as an inline-editable tree). No Board/Phase
-Map/Next Actions views or drag-and-drop yet -- see `overview.md`'s
-"Implementation Phases" for what comes after.
+projects/phases/tasks/events, a computed status/progress summary derived
+from task completion, a dashboard of project cards, a guided modal wizard
+for creating new projects, and a project detail page (phases -> tasks as
+an inline-editable ordered checklist, plus an events section). No
+drag-and-drop or search/filtering yet -- see `overview.md`'s
+"Implementation Phases" and "Open Questions" for what's still open.

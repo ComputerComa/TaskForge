@@ -16,7 +16,11 @@ defineEmits<{ 'move-up': []; 'move-down': [] }>()
 const treeApi = inject(projectTreeKey)!
 
 const newTaskTitle = ref('')
-const newTaskReference = ref('')
+
+// Tasks block sequentially by position: the "current" one is the first
+// that isn't done yet -- everything after it is implicitly waiting.
+const firstPendingIndex = computed(() => phase.tasks.findIndex(task => task.status !== 'done'))
+const doneCount = computed(() => phase.tasks.filter(task => task.status === 'done').length)
 
 function save(field: 'name' | 'description', value: string) {
   treeApi.updatePhase(phase.id, { [field]: value })
@@ -33,15 +37,9 @@ function remove() {
 
 async function addTask() {
   const title = newTaskTitle.value.trim()
-  const reference = newTaskReference.value.trim()
-  if (!title || !reference) return
-  const slug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+  if (!title) return
   newTaskTitle.value = ''
-  newTaskReference.value = ''
-  await treeApi.createTask({ phaseId: phase.id, title, reference, slug })
+  await treeApi.createTask({ phaseId: phase.id, title })
 }
 
 function moveTask(index: number, direction: -1 | 1) {
@@ -61,7 +59,7 @@ function moveTask(index: number, direction: -1 | 1) {
       </div>
       <InlineTextField class="name" :model-value="phase.name" @save="value => save('name', value)" />
       <StatusSelect :model-value="phase.status" :options="phaseStatuses" @update:model-value="saveStatus" />
-      <span class="task-count">{{ phase.tasks.length }} task{{ phase.tasks.length === 1 ? '' : 's' }}</span>
+      <span class="task-count">{{ doneCount }}/{{ phase.tasks.length }} done</span>
       <button type="button" class="danger" @click="remove">Delete</button>
     </div>
     <InlineTextField
@@ -77,6 +75,7 @@ function moveTask(index: number, direction: -1 | 1) {
         v-for="(task, index) in phase.tasks"
         :key="task.id"
         :task="task"
+        :is-current="index === firstPendingIndex"
         :can-move-up="index > 0"
         :can-move-down="index < phase.tasks.length - 1"
         @move-up="moveTask(index, -1)"
@@ -84,8 +83,7 @@ function moveTask(index: number, direction: -1 | 1) {
       />
 
       <form class="add-task" @submit.prevent="addTask">
-        <input v-model="newTaskReference" placeholder="Reference (NAS-001)" class="reference" />
-        <input v-model="newTaskTitle" placeholder="New task title" class="title" />
+        <input v-model="newTaskTitle" placeholder="New task" class="title" />
         <button type="submit">Add task</button>
       </form>
     </div>
@@ -166,11 +164,6 @@ function moveTask(index: number, direction: -1 | 1) {
 .add-task {
   display: flex;
   gap: 0.4rem;
-}
-
-.add-task .reference {
-  width: 8rem;
-  font-family: ui-monospace, monospace;
 }
 
 .add-task .title {

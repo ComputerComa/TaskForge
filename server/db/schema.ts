@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 const timestamp = (name: string) =>
   integer(name, { mode: 'timestamp_ms' }).notNull().default(sql`(unixepoch('subsec') * 1000)`)
@@ -13,12 +13,18 @@ export const users = sqliteTable('users', {
   createdAt: timestamp('created_at'),
 })
 
-// --- Core hierarchy: Project -> Phase -> Task -> Step --------------------
+// --- Core hierarchy: Project -> Phase -> Task ----------------------------
+//
+// Deliberately 3 levels, not 4: a Task is the atomic, ordered checklist
+// item (what earlier drafts called a "Step"). Phases and tasks block
+// purely sequentially by position -- the previous one in the list must be
+// done -- there is no free-form dependency graph.
 
 export const projects = sqliteTable('projects', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   identifier: text('identifier').notNull().unique(),
   name: text('name').notNull(),
+  // The project's overall goal -- what the whole thing is for.
   description: text('description').notNull().default(''),
   // active | on_hold | done | archived -- enforced in the Zod layer, not here.
   status: text('status').notNull().default('active'),
@@ -34,41 +40,21 @@ export const phases = sqliteTable('phases', {
   name: text('name').notNull(),
   description: text('description').notNull().default(''),
   position: integer('position').notNull().default(0),
-  // active | done | archived -- stored directly, not derived from tasks in this slice.
+  // active | done | archived -- a manual override; the "current phase" used
+  // for status/progress is normally derived from task completion instead
+  // (see server/utils/db-helpers.ts), so this mostly matters for phases
+  // with no tasks yet, or for marking one skipped/archived.
   status: text('status').notNull().default('active'),
 })
 
-export const tasks = sqliteTable(
-  'tasks',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    projectId: integer('project_id')
-      .notNull()
-      .references(() => projects.id, { onDelete: 'cascade' }),
-    phaseId: integer('phase_id')
-      .notNull()
-      .references(() => phases.id, { onDelete: 'cascade' }),
-    reference: text('reference').notNull(),
-    slug: text('slug').notNull(),
-    title: text('title').notNull(),
-    description: text('description').notNull().default(''),
-    // backlog | ready | in_progress | waiting | done
-    status: text('status').notNull().default('backlog'),
-    assignee: text('assignee'),
-    dueAt: integer('due_at', { mode: 'timestamp_ms' }),
-    position: integer('position').notNull().default(0),
-  },
-  table => [
-    uniqueIndex('tasks_project_reference_unique').on(table.projectId, table.reference),
-    uniqueIndex('tasks_project_slug_unique').on(table.projectId, table.slug),
-  ],
-)
-
-export const steps = sqliteTable('steps', {
+export const tasks = sqliteTable('tasks', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  taskId: integer('task_id')
+  projectId: integer('project_id')
     .notNull()
-    .references(() => tasks.id, { onDelete: 'cascade' }),
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  phaseId: integer('phase_id')
+    .notNull()
+    .references(() => phases.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description').notNull().default(''),
   // pending | done
@@ -79,16 +65,21 @@ export const steps = sqliteTable('steps', {
   link: text('link'),
 })
 
-export const taskDependencies = sqliteTable(
-  'task_dependencies',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    taskId: integer('task_id')
-      .notNull()
-      .references(() => tasks.id, { onDelete: 'cascade' }),
-    dependsOnTaskId: integer('depends_on_task_id')
-      .notNull()
-      .references(() => tasks.id, { onDelete: 'cascade' }),
-  },
-  table => [uniqueIndex('task_dependencies_edge_unique').on(table.taskId, table.dependsOnTaskId)],
-)
+// --- Events ---------------------------------------------------------------
+//
+// Dated external milestones a project is waiting on -- "SSDs expected to
+// arrive ~Oct 3" -- distinct from the task checklist. Surfaced on the
+// dashboard as "upcoming events".
+
+export const events = sqliteTable('events', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  projectId: integer('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  expectedAt: integer('expected_at', { mode: 'timestamp_ms' }),
+  note: text('note'),
+  // upcoming | occurred | cancelled
+  status: text('status').notNull().default('upcoming'),
+  createdAt: timestamp('created_at'),
+})

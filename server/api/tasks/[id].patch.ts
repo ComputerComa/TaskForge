@@ -9,10 +9,7 @@ export default defineEventHandler(async event => {
   const body = await parseBody(updateTaskSchema, event)
 
   const db = useDb()
-  const [task] = runUnique(
-    () => db.update(tasks).set(body).where(eq(tasks.id, id)).returning().all(),
-    'A task with this reference or slug already exists in this project',
-  )
+  const [task] = db.update(tasks).set(body).where(eq(tasks.id, id)).returning().all()
   if (!task) {
     throw createError({ statusCode: 404, statusMessage: 'Task not found' })
   }

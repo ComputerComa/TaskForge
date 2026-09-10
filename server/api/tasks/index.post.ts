@@ -14,16 +14,12 @@ export default defineEventHandler(async event => {
     .where(eq(tasks.phaseId, body.phaseId))
     .all()
 
-  const [task] = runUnique(
-    () =>
-      db
-        .insert(tasks)
-        .values({ ...body, position: nextPosition(siblings) })
-        .returning()
-        .all(),
-    `A task with reference "${body.reference}" or slug "${body.slug}" already exists in this project`,
-  )
+  const [task] = db
+    .insert(tasks)
+    .values({ ...body, position: nextPosition(siblings) })
+    .returning()
+    .all()
 
   setResponseStatus(event, 201)
-  return { ...task, steps: [], dependencies: [] }
+  return task
 })

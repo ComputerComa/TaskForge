@@ -2,6 +2,8 @@
 import { projectTreeKey } from '~/composables/useProjectTree'
 import ProjectEditableHeader from '~/components/projects/ProjectEditableHeader.vue'
 import PhaseTree from '~/components/projects/PhaseTree.vue'
+import StatusSummary from '~/components/projects/StatusSummary.vue'
+import EventList from '~/components/projects/EventList.vue'
 
 const route = useRoute()
 const projectId = Number(route.params.id)
@@ -20,7 +22,9 @@ const { tree, pending, error } = treeApi
     <p v-else-if="error" class="muted">Could not load this project.</p>
     <template v-else-if="tree">
       <ProjectEditableHeader :project="tree" />
+      <StatusSummary :summary="tree.statusSummary" />
       <PhaseTree :phases="tree.phases" />
+      <EventList :events="tree.events" />
     </template>
   </div>
 </template>
@@ -29,7 +33,7 @@ const { tree, pending, error } = treeApi
 .page {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .back {
