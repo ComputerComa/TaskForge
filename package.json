@@ -8,17 +8,16 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx server/db/seed.ts",
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
     "@adonisjs/hash": "^9.1.1",
     "@nuxt/ui": "^4.11.1",
-    "better-sqlite3": "^13.0.3",
     "dotenv": "^17.4.2",
-    "drizzle-orm": "^0.45.2",
+    "@prisma/client": "^6.16.2",
     "nuxt": "^4.5.2",
     "nuxt-auth-utils": "^0.5.30",
     "vue": "^3.5.42",
@@ -27,12 +26,19 @@
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.130",
-    "@types/better-sqlite3": "^9.6.0",
     "@vueuse/core": "^14.4.0",
     "@vueuse/nuxt": "^14.4.0",
-    "drizzle-kit": "^0.31.10",
+    "@types/node": "^24.3.0",
+    "prisma": "^6.16.2",
     "tsx": "^4.23.13",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.3.11"
+  },
+  "allowScripts": {
+    "esbuild@0.18.20": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true,
+    "esbuild@0.27.7": true,
+    "vue-demi@0.14.10": true
   }
 }

@@ -1,14 +1,13 @@
 import { createEventSchema } from '~~/shared/schemas/event.schema'
 import { useDb } from '~~/server/db/client'
-import { events } from '~~/server/db/schema'
 
 export default defineEventHandler(async event => {
   await requireAuth(event)
   const body = await parseBody(createEventSchema, event)
-  assertValidEventScope(body.projectId, body.scopeType, body.scopeId)
+  await assertValidEventScope(body.projectId, body.scopeType, body.scopeId)
 
   const db = useDb()
-  const [created] = db.insert(events).values(body).returning().all()
+  const created = await db.event.create({ data: body })
 
   setResponseStatus(event, 201)
   return created

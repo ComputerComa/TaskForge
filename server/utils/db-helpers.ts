@@ -1,6 +1,4 @@
-import { and, eq } from 'drizzle-orm'
 import { useDb } from '../db/client'
-import { events, phases, projects, tasks } from '../db/schema'
 import type { ProjectStatusSummary } from '~~/shared/types/entities'
 
 function groupBy<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
@@ -64,12 +62,12 @@ export function computeProjectStatus(
   }
 }
 
-export function fetchProjectSummaries() {
+export async function fetchProjectSummaries() {
   const db = useDb()
-  const allProjects = db.select().from(projects).all()
-  const allPhases = db.select().from(phases).orderBy(phases.position).all()
-  const allTasks = db.select().from(tasks).all()
-  const allEvents = db.select().from(events).all()
+  const [allProjects, allPhases, allTasks, allEvents] = await Promise.all([
+    db.project.findMany(), db.phase.findMany({ orderBy: { position: 'asc' } }),
+    db.task.findMany(), db.event.findMany(),
+  ])
 
   const phasesByProject = groupBy(allPhases, phase => phase.projectId)
   const tasksByPhase = groupBy(allTasks, task => task.phaseId)
@@ -102,30 +100,16 @@ export function fetchProjectSummaries() {
  * ancestor scope -- a project-level blocker blocks every phase and task,
  * a phase-level blocker blocks all of that phase's tasks). Used by the
  * Project Detail view. Returns null if the project doesn't exist. */
-export function fetchProjectTree(projectId: number) {
+export async function fetchProjectTree(projectId: number) {
   const db = useDb()
-  const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+  const project = await db.project.findUnique({ where: { id: projectId } })
   if (!project) return null
 
-  const projectPhases = db
-    .select()
-    .from(phases)
-    .where(eq(phases.projectId, projectId))
-    .orderBy(phases.position)
-    .all()
+  const projectPhases = await db.phase.findMany({ where: { projectId }, orderBy: { position: 'asc' } })
 
-  const projectTasks = db
-    .select()
-    .from(tasks)
-    .where(eq(tasks.projectId, projectId))
-    .orderBy(tasks.position)
-    .all()
+  const projectTasks = await db.task.findMany({ where: { projectId }, orderBy: { position: 'asc' } })
 
-  const projectEvents = db
-    .select()
-    .from(events)
-    .where(eq(events.projectId, projectId))
-    .all()
+  const projectEvents = (await db.event.findMany({ where: { projectId } }))
     .sort((a, b) => (a.expectedAt?.getTime() ?? Infinity) - (b.expectedAt?.getTime() ?? Infinity))
 
   const tasksByPhase = groupBy(projectTasks, task => task.phaseId)
@@ -166,7 +150,7 @@ export function fetchProjectTree(projectId: number) {
 /** Throws a 400/404 H3Error if (scopeType, scopeId) isn't a valid target
  * within `projectId` -- Zod alone can't check this since it needs the DB.
  * Called from the events create/update handlers. */
-export function assertValidEventScope(projectId: number, scopeType: string, scopeId: number) {
+export async function assertValidEventScope(projectId: number, scopeType: string, scopeId: number) {
   const db = useDb()
 
   if (scopeType === 'project') {
@@ -180,11 +164,7 @@ export function assertValidEventScope(projectId: number, scopeType: string, scop
   }
 
   if (scopeType === 'phase') {
-    const phase = db
-      .select({ id: phases.id })
-      .from(phases)
-      .where(and(eq(phases.id, scopeId), eq(phases.projectId, projectId)))
-      .get()
+    const phase = await db.phase.findFirst({ where: { id: scopeId, projectId }, select: { id: true } })
     if (!phase) {
       throw createError({ statusCode: 404, statusMessage: 'Phase not found in this project' })
     }
@@ -192,11 +172,7 @@ export function assertValidEventScope(projectId: number, scopeType: string, scop
   }
 
   if (scopeType === 'task') {
-    const task = db
-      .select({ id: tasks.id })
-      .from(tasks)
-      .where(and(eq(tasks.id, scopeId), eq(tasks.projectId, projectId)))
-      .get()
+    const task = await db.task.findFirst({ where: { id: scopeId, projectId }, select: { id: true } })
     if (!task) {
       throw createError({ statusCode: 404, statusMessage: 'Task not found in this project' })
     }
@@ -207,12 +183,9 @@ export function assertValidEventScope(projectId: number, scopeType: string, scop
  * otherwise be orphaned (their scopeId would point at nothing) -- demote
  * them to project scope instead of losing them. Called before deleting a
  * phase (which cascades its tasks) or a task. */
-export function demoteEventScope(projectId: number, scopeType: 'phase' | 'task', scopeId: number) {
+export async function demoteEventScope(projectId: number, scopeType: 'phase' | 'task', scopeId: number) {
   const db = useDb()
-  db.update(events)
-    .set({ scopeType: 'project', scopeId: projectId })
-    .where(and(eq(events.scopeType, scopeType), eq(events.scopeId, scopeId)))
-    .run()
+  await db.event.updateMany({ where: { scopeType, scopeId }, data: { scopeType: 'project', scopeId: projectId } })
 }
 
 export function nextPosition(rows: { position: number }[]): number {
@@ -225,7 +198,7 @@ export function runUnique<T>(write: () => T, conflictMessage: string): T {
   try {
     return write()
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       throw createError({ statusCode: 409, statusMessage: conflictMessage })
     }
     throw error

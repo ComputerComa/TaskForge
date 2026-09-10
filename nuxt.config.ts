@@ -8,7 +8,6 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
-    // NUXT_DATABASE_PATH
-    databasePath: './server/db/data/taskforge.db',
+    // DATABASE_URL is consumed server-side by Prisma via process.env.
   },
 })

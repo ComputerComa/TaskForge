@@ -16,31 +16,31 @@ import 'dotenv/config'
 import { Hash } from '@adonisjs/hash'
 import { Scrypt } from '@adonisjs/hash/drivers/scrypt'
 import { useDb } from './client'
-import { users } from './schema'
 
 async function main() {
-  const username = process.env.ADMIN_USERNAME
-  const password = process.env.ADMIN_PASSWORD
-
-  if (!username || !password) {
-    console.error('ADMIN_USERNAME and ADMIN_PASSWORD must be set (see .env.example).')
-    process.exit(1)
+  const env = (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}
+  const username = env.ADMIN_USERNAME
+  if (!username) {
+    console.error('ADMIN_USERNAME must be set (see .env.example).')
+    throw new Error('ADMIN_USERNAME must be set (see .env.example).')
   }
 
   const db = useDb()
-  const existing = db.select({ id: users.id }).from(users).limit(1).all()
-  if (existing.length > 0) {
+  const existing = await db.user.findFirst({ select: { id: true } })
+  if (existing) {
     console.log('admin user already exists, skipping.')
     return
   }
 
+  const password = Array.from({ length: 4 }, () => crypto.randomUUID().replaceAll('-', '')).join('').slice(0, 32)
   const hash = new Hash(new Scrypt({}))
   const passwordHash = await hash.make(password)
-  db.insert(users).values({ username, passwordHash }).run()
+  await db.user.create({ data: { username, passwordHash } })
   console.log(`created admin user "${username}".`)
+  console.log(`Generated admin password (save it now; it will not be shown again): ${password}`)
 }
 
 main().catch(error => {
   console.error(error)
-  process.exit(1)
+  throw error
 })
