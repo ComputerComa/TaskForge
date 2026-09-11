@@ -13,6 +13,8 @@ const treeApi = inject(projectTreeKey)!
 // timestamp, so trim to the date part for display.
 const dateValue = computed(() => event.expectedAt?.slice(0, 10) ?? '')
 
+const typeOptions = eventTypes.map(type => ({ value: type, label: `${eventTypeMeta[type].icon} ${eventTypeMeta[type].label}` }))
+
 const scopeOptions = computed(() => [
   { value: `project:${tree.id}`, label: 'Whole project' },
   ...tree.phases.map(phase => ({ value: `phase:${phase.id}`, label: `Phase: ${phase.name}` })),
@@ -39,13 +41,12 @@ function saveStatus(value: string) {
   treeApi.updateEvent(event.id, { status: value as EventSummary['status'] })
 }
 
-function saveType(raw: Event) {
-  const value = (raw.target as HTMLSelectElement).value as EventSummary['type']
-  treeApi.updateEvent(event.id, { type: value })
+function saveType(value: string) {
+  treeApi.updateEvent(event.id, { type: value as EventSummary['type'] })
 }
 
-function saveScope(raw: Event) {
-  const [scopeType, scopeIdRaw] = (raw.target as HTMLSelectElement).value.split(':')
+function saveScope(value: string) {
+  const [scopeType, scopeIdRaw] = value.split(':')
   treeApi.updateEvent(event.id, { scopeType: scopeType as EventSummary['scopeType'], scopeId: Number(scopeIdRaw) })
 }
 
@@ -60,19 +61,15 @@ function remove() {
     :class="{ occurred: event.status === 'occurred', cancelled: event.status === 'cancelled', blocker: isActiveBlockerEvent(event) }"
   >
     <div class="row">
-      <select class="type" :value="event.type" @change="saveType">
-        <option v-for="type in eventTypes" :key="type" :value="type">{{ eventTypeMeta[type].icon }} {{ eventTypeMeta[type].label }}</option>
-      </select>
-      <input type="date" :value="dateValue" @change="saveDate(($event.target as HTMLInputElement).value)" />
+      <USelect :model-value="event.type" :items="typeOptions" class="min-w-36" @update:model-value="saveType" />
+      <UInput :model-value="dateValue" type="date" @update:model-value="value => saveDate(String(value))" />
       <InlineTextField class="title" :model-value="event.title" @save="saveTitle" />
       <StatusSelect :model-value="event.status" :options="eventStatuses" @update:model-value="saveStatus" />
-      <button type="button" class="danger" @click="remove">Delete</button>
+      <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="xs" square title="Delete" @click="remove" />
     </div>
     <div class="row secondary">
       <span class="scope-label">Scope:</span>
-      <select class="scope" :value="scopeValue" @change="saveScope">
-        <option v-for="option in scopeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-      </select>
+      <USelect :model-value="scopeValue" :items="scopeOptions" size="xs" class="min-w-40" @update:model-value="saveScope" />
       <span v-if="isActiveBlockerEvent(event)" class="blocking-tag">blocking {{ eventScopeLabel(event, tree) }}</span>
     </div>
     <InlineTextField
@@ -115,31 +112,9 @@ function remove() {
   color: var(--text-muted);
 }
 
-.row input[type='date'],
-select {
-  padding: 0.15rem 0.3rem;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  background: var(--surface);
-  font-size: 0.8rem;
-  color: var(--text);
-}
-
 .title {
   flex: 1;
   font-weight: 500;
-}
-
-.danger {
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 0.75rem;
-}
-
-.danger:hover {
-  color: var(--danger);
 }
 
 .scope-label {

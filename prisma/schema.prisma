@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+model User {
+  id Int @id @default(autoincrement())
+  username String @unique
+  passwordHash String @map("password_hash")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("users")
+}
+
+model Project {
+  id Int @id @default(autoincrement())
+  identifier String @unique
+  name String
+  description String @default("")
+  status String @default("active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  phases Phase[]
+  tasks Task[]
+  events Event[]
+  @@map("projects")
+}
+
+model Phase {
+  id Int @id @default(autoincrement())
+  projectId Int @map("project_id")
+  name String
+  description String @default("")
+  position Int @default(0)
+  status String @default("active")
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks Task[]
+  events Event[]
+  @@index([projectId])
+  @@map("phases")
+}
+
+model Task {
+  id Int @id @default(autoincrement())
+  projectId Int @map("project_id")
+  phaseId Int @map("phase_id")
+  title String
+  description String @default("")
+  status String @default("pending")
+  position Int @default(0)
+  command String?
+  notes String?
+  link String?
+  reference String?
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phase Phase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  events Event[]
+  @@index([projectId])
+  @@index([phaseId])
+  @@map("tasks")
+}
+
+model Event {
+  id Int @id @default(autoincrement())
+  projectId Int @map("project_id")
+  scopeType String @default("project") @map("scope_type")
+  scopeId Int @map("scope_id")
+  type String @default("milestone")
+  title String
+  description String?
+  expectedAt DateTime? @map("expected_at")
+  status String @default("upcoming")
+  createdAt DateTime @default(now()) @map("created_at")
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phaseId Int? @map("phase_id")
+  phase Phase? @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  taskId Int? @map("task_id")
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  @@index([projectId])
+  @@index([scopeType, scopeId])
+  @@map("events")
+}

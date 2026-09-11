@@ -4,6 +4,13 @@ import { nonEmptyString } from './common'
 export const phaseStatuses = ['active', 'done', 'archived'] as const
 export type PhaseStatus = (typeof phaseStatuses)[number]
 
+// Read-only, never persisted or client-writable -- 'pending' is derived at
+// read time (see server/utils/db-helpers.ts -> computePhaseDisplayStatuses)
+// so that exactly one phase is ever 'active' regardless of what raw
+// 'active'/'done'/'archived' values are actually stored.
+export const phaseDisplayStatuses = ['pending', 'active', 'done', 'archived'] as const
+export type PhaseDisplayStatus = (typeof phaseDisplayStatuses)[number]
+
 export const createPhaseSchema = z
   .object({
     projectId: z.number().int().positive(),

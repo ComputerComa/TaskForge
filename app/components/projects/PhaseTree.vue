@@ -7,20 +7,11 @@ import type { PhaseNode as PhaseNodeType } from '~~/shared/types/entities'
 const { phases } = defineProps<{ phases: PhaseNodeType[] }>()
 const treeApi = inject(projectTreeKey)!
 
-const newPhaseName = ref('')
-
 // Phases block sequentially by position: the "current" one is the first
 // that isn't done yet. Only that phase's first pending task should ever
 // be marked "up next" -- everything after it is waiting on it, not
 // independently "next" within its own task list.
 const currentPhaseIndex = computed(() => phases.findIndex(phase => !isPhaseDone(phase)))
-
-async function addPhase() {
-  const name = newPhaseName.value.trim()
-  if (!name) return
-  newPhaseName.value = ''
-  await treeApi.createPhase({ name })
-}
 
 function move(index: number, direction: -1 | 1) {
   const target = phases[index + direction]
@@ -42,11 +33,6 @@ function move(index: number, direction: -1 | 1) {
       @move-up="move(index, -1)"
       @move-down="move(index, 1)"
     />
-
-    <form class="add-phase" @submit.prevent="addPhase">
-      <input v-model="newPhaseName" placeholder="New phase name" />
-      <button type="submit">Add phase</button>
-    </form>
   </div>
 </template>
 
@@ -55,26 +41,5 @@ function move(index: number, direction: -1 | 1) {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-}
-
-.add-phase {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.add-phase input {
-  flex: 1;
-  padding: 0.35rem 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-}
-
-.add-phase button {
-  padding: 0.35rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  cursor: pointer;
 }
 </style>

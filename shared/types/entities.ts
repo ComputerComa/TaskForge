@@ -1,5 +1,5 @@
 import type { EventScopeType, EventStatus, EventType } from '../schemas/event.schema'
-import type { PhaseStatus } from '../schemas/phase.schema'
+import type { PhaseDisplayStatus, PhaseStatus } from '../schemas/phase.schema'
 import type { ProjectStatus } from '../schemas/project.schema'
 import type { TaskStatus } from '../schemas/task.schema'
 
@@ -67,6 +67,11 @@ export interface PhaseNode {
   description: string
   position: number
   status: PhaseStatus
+  // Derived at read time in server/utils/db-helpers.ts ->
+  // computePhaseDisplayStatuses; never persisted, never part of the
+  // export/import document. Exactly one phase in a project is ever
+  // 'active'; use this (not `status`) to render a phase's current state.
+  displayStatus: PhaseDisplayStatus
   tasks: TaskNode[]
   // Active blocker events affecting this phase, own scope plus inherited
   // from the project.

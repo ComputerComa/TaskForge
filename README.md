@@ -15,10 +15,10 @@ for the full design and roadmap.
 npm install
 cp .env.example .env
 # Edit .env: set NUXT_SESSION_PASSWORD (32+ chars, e.g. `openssl rand -base64 32`)
-# and ADMIN_USERNAME / ADMIN_PASSWORD for the one local account this app supports.
+# and ADMIN_USERNAME for the one local account this app supports.
 
 npm run db:migrate
-npm run db:seed   # creates the admin user from .env -- idempotent, safe to re-run
+npm run db:seed   # creates the admin user with a generated password
 
 npm run dev
 ```
@@ -29,8 +29,8 @@ and it no-ops if a user already exists.
 ## Scripts
 
 - `npm run dev` / `build` / `preview` -- standard Nuxt commands.
-- `npm run db:generate` -- regenerate Drizzle migration SQL after editing `server/db/schema.ts`.
-- `npm run db:migrate` -- apply pending migrations to the SQLite database at `NUXT_DATABASE_PATH`.
+- `npm run db:generate` -- generate Prisma Client from the supplied `prisma/schema.prisma`.
+- `npm run db:migrate` -- apply pending Prisma migrations.
 - `npm run db:seed` -- create the admin user from `ADMIN_USERNAME`/`ADMIN_PASSWORD`.
 - `npm run typecheck` -- `nuxt typecheck` across the whole app.
 

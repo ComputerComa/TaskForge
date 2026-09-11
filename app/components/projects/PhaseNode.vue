@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { phaseStatuses } from '~~/shared/schemas/phase.schema'
 import { projectTreeKey } from '~/composables/useProjectTree'
 import { isPhaseVisible, projectUiKey } from '~/composables/useProjectDetailUi'
 import BlockedBadge from './BlockedBadge.vue'
 import InlineTextField from './InlineTextField.vue'
-import StatusSelect from './StatusSelect.vue'
 import TaskNode from './TaskNode.vue'
+import type { PhaseDisplayStatus } from '~~/shared/schemas/phase.schema'
 import type { PhaseNode as PhaseNodeType } from '~~/shared/types/entities'
 
 const { phase, isCurrentPhase, canMoveUp, canMoveDown } = defineProps<{
@@ -22,8 +21,6 @@ defineEmits<{ 'move-up': []; 'move-down': [] }>()
 const treeApi = inject(projectTreeKey)!
 const uiApi = inject(projectUiKey)!
 
-const newTaskTitle = ref('')
-
 // Tasks block sequentially by position: the "current" one is the first
 // that isn't done yet -- everything after it is implicitly waiting. But
 // that only applies within the project's current phase; a later phase's
@@ -36,24 +33,42 @@ const doneCount = computed(() => phase.tasks.filter(task => task.status === 'don
 const visible = computed(() => isPhaseVisible(phase, uiApi.filters))
 const collapsed = computed(() => uiApi.isPhaseCollapsed(phase))
 
+// Only the current phase defaults to showing just its "up next" task --
+// a manually-expanded past/future phase has no single current task, so
+// it always shows everything (see the v-show on TaskNode below).
+const taskListExpanded = computed(() => uiApi.isTaskListExpanded(phase))
+const showTaskListToggle = computed(() => isCurrentPhase && phase.tasks.length > 1)
+
+// Read-only badge colors for the derived status -- mirrors
+// StatusSelect.vue's colorByStatus palette for these same words, kept
+// local since this is a badge, not a select.
+const displayStatusColor: Record<PhaseDisplayStatus, 'neutral' | 'success'> = {
+  pending: 'neutral',
+  active: 'neutral',
+  done: 'success',
+  archived: 'neutral',
+}
+
 function save(field: 'name' | 'description', value: string) {
   treeApi.updatePhase(phase.id, { [field]: value })
 }
 
-function saveStatus(value: string) {
-  treeApi.updatePhase(phase.id, { status: value as PhaseNodeType['status'] })
+// Only meaningful for a phase with no tasks -- there's nothing to derive
+// completion from, so this is the one case that's still a manual toggle.
+function toggleDone() {
+  treeApi.updatePhase(phase.id, { status: phase.status === 'done' ? 'active' : 'done' })
+}
+
+// Archiving always counts as complete for sequencing (see
+// isPhaseComplete), even with unfinished tasks -- it's an explicit "skip
+// this phase" action, available regardless of task count.
+function toggleArchived() {
+  treeApi.updatePhase(phase.id, { status: phase.status === 'archived' ? 'active' : 'archived' })
 }
 
 function remove() {
   if (phase.tasks.length > 0 && !confirm(`Delete phase "${phase.name}" and its ${phase.tasks.length} task(s)?`)) return
   treeApi.deletePhase(phase.id)
-}
-
-async function addTask() {
-  const title = newTaskTitle.value.trim()
-  if (!title) return
-  newTaskTitle.value = ''
-  await treeApi.createTask({ phaseId: phase.id, title })
 }
 
 function moveTask(index: number, direction: -1 | 1) {
@@ -67,19 +82,46 @@ function moveTask(index: number, direction: -1 | 1) {
 <template>
   <section v-show="visible" :id="`phase-${phase.id}`" class="phase">
     <div class="phase-header">
-      <button type="button" class="collapse" :title="collapsed ? 'Expand' : 'Collapse'" @click="uiApi.togglePhaseCollapsed(phase)">
-        {{ collapsed ? '>' : 'v' }}
-      </button>
+      <UButton
+        :icon="collapsed ? 'i-lucide-chevron-right' : 'i-lucide-chevron-down'"
+        :title="collapsed ? 'Expand' : 'Collapse'"
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        square
+        @click="uiApi.togglePhaseCollapsed(phase)"
+      />
       <InlineTextField class="name" :model-value="phase.name" @save="value => save('name', value)" />
-      <StatusSelect :model-value="phase.status" :options="phaseStatuses" @update:model-value="saveStatus" />
+      <UBadge
+        :label="phase.displayStatus"
+        :color="displayStatusColor[phase.displayStatus]"
+        variant="subtle"
+        size="sm"
+        class="capitalize"
+      />
+      <UCheckbox
+        v-if="phase.tasks.length === 0 && phase.status !== 'archived'"
+        :model-value="phase.status === 'done'"
+        title="Mark phase done"
+        @update:model-value="toggleDone"
+      />
+      <UButton
+        :icon="phase.status === 'archived' ? 'i-lucide-archive-restore' : 'i-lucide-archive'"
+        :title="phase.status === 'archived' ? 'Unarchive phase' : 'Archive phase'"
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        square
+        @click="toggleArchived"
+      />
       <span class="task-count">{{ doneCount }}/{{ phase.tasks.length }} done</span>
       <BlockedBadge :blockers="phase.blockers" />
       <div class="spacer" />
       <div class="reorder">
-        <button type="button" :disabled="!canMoveUp" title="Move up" @click="$emit('move-up')">^</button>
-        <button type="button" :disabled="!canMoveDown" title="Move down" @click="$emit('move-down')">v</button>
+        <UButton icon="i-lucide-chevron-up" title="Move up" color="neutral" variant="ghost" size="xs" square :disabled="!canMoveUp" @click="$emit('move-up')" />
+        <UButton icon="i-lucide-chevron-down" title="Move down" color="neutral" variant="ghost" size="xs" square :disabled="!canMoveDown" @click="$emit('move-down')" />
       </div>
-      <button type="button" class="danger" @click="remove">Delete</button>
+      <UButton icon="i-lucide-trash-2" label="Delete" color="error" variant="ghost" size="xs" @click="remove" />
     </div>
 
     <template v-if="!collapsed">
@@ -94,6 +136,7 @@ function moveTask(index: number, direction: -1 | 1) {
       <div class="tasks">
         <TaskNode
           v-for="(task, index) in phase.tasks"
+          v-show="!isCurrentPhase || taskListExpanded || index === firstPendingIndex"
           :key="task.id"
           :task="task"
           :is-current="index === firstPendingIndex"
@@ -103,10 +146,16 @@ function moveTask(index: number, direction: -1 | 1) {
           @move-down="moveTask(index, 1)"
         />
 
-        <form class="add-task" @submit.prevent="addTask">
-          <input v-model="newTaskTitle" placeholder="New task" class="title" />
-          <button type="submit">Add task</button>
-        </form>
+        <UButton
+          v-if="showTaskListToggle"
+          :icon="taskListExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+          :label="taskListExpanded ? 'Show only current task' : `Show all ${phase.tasks.length} tasks`"
+          color="neutral"
+          variant="link"
+          size="xs"
+          class="show-all"
+          @click="uiApi.toggleTaskListExpanded(phase)"
+        />
       </div>
     </template>
   </section>
@@ -127,21 +176,6 @@ function moveTask(index: number, direction: -1 | 1) {
   flex-wrap: wrap;
 }
 
-.collapse {
-  flex: none;
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 0.8rem;
-  padding: 0 0.2rem;
-  line-height: 1;
-}
-
-.collapse:hover {
-  color: var(--text);
-}
-
 .spacer {
   flex: 1;
 }
@@ -150,25 +184,6 @@ function moveTask(index: number, direction: -1 | 1) {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-}
-
-.reorder button {
-  line-height: 1;
-  padding: 0 0.25rem;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  cursor: pointer;
-  font-size: 0.65rem;
-  color: var(--text-muted);
-}
-
-.reorder button:hover:not(:disabled) {
-  color: var(--text);
-}
-
-.reorder button:disabled {
-  opacity: 0.3;
-  cursor: default;
 }
 
 .name {
@@ -189,19 +204,6 @@ function moveTask(index: number, direction: -1 | 1) {
   color: var(--text-muted);
 }
 
-.danger {
-  border: none;
-  color: var(--text-muted);
-  background: none;
-  cursor: pointer;
-  font-size: 0.75rem;
-  padding: 0.1rem 0.3rem;
-}
-
-.danger:hover {
-  color: var(--danger);
-}
-
 .tasks {
   margin-top: 0.6rem;
   margin-left: 1.4rem;
@@ -212,28 +214,9 @@ function moveTask(index: number, direction: -1 | 1) {
   gap: 0.4rem;
 }
 
-.add-task {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.add-task .title {
-  flex: 1;
-}
-
-.add-task input {
-  padding: 0.3rem 0.45rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg);
-}
-
-.add-task button {
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  cursor: pointer;
+.show-all {
+  align-self: flex-start;
+  padding: 0;
 }
 
 @media (max-width: 640px) {

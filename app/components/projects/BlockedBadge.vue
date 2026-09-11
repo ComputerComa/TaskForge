@@ -11,21 +11,15 @@ const label = computed(() => {
 </script>
 
 <template>
-  <span v-if="blockers.length > 0" class="badge" :title="blockers.map(b => b.title).join(', ')">
-    {{ label }}
-  </span>
+  <UBadge
+    v-if="blockers.length > 0"
+    color="error"
+    variant="subtle"
+    size="sm"
+    icon="i-lucide-octagon-alert"
+    class="max-w-[12rem] self-start"
+    :title="blockers.map(b => b.title).join(', ')"
+  >
+    <span class="min-w-0 truncate">{{ label }}</span>
+  </UBadge>
 </template>
-
-<style scoped>
-.badge {
-  font-size: 0.7rem;
-  padding: 0.05rem 0.5rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--danger) 15%, transparent);
-  color: var(--danger);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 12rem;
-}
-</style>

@@ -3,10 +3,11 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
-  modules: ['nuxt-auth-utils', '@vueuse/nuxt'],
+  modules: ['nuxt-auth-utils', '@vueuse/nuxt', '@nuxt/ui'],
+
+  css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
-    // NUXT_DATABASE_PATH
-    databasePath: './server/db/data/taskforge.db',
+    // DATABASE_URL is consumed server-side by Prisma via process.env.
   },
 })

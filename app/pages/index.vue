@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ProjectWizard from '~/components/projects/ProjectWizard.vue'
+import ImportProjectModal from '~/components/projects/ImportProjectModal.vue'
 import ProjectCard from '~/components/projects/ProjectCard.vue'
 import type { ProjectSummary } from '~~/shared/types/entities'
 
@@ -10,51 +11,25 @@ const { data: projects, pending, refresh } = useAsyncData<ProjectSummary[]>('pro
   requestFetch('/api/projects'),
 )
 
-async function onCreated() {
+async function refreshProjects() {
   await refresh()
 }
 </script>
 
 <template>
-  <div class="page">
-    <div class="header">
-      <h1>Dashboard</h1>
-      <ProjectWizard @created="onCreated" />
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-xl font-semibold text-default">Dashboard</h1>
+      <div class="flex gap-2">
+        <ImportProjectModal @imported="refreshProjects" />
+        <ProjectWizard @created="refreshProjects" />
+      </div>
     </div>
 
-    <p v-if="pending" class="muted">Loading...</p>
-    <p v-else-if="!projects?.length" class="muted">No projects yet. Create one to get started.</p>
-    <div v-else class="grid">
+    <p v-if="pending" class="text-sm text-muted">Loading...</p>
+    <p v-else-if="!projects?.length" class="text-sm text-muted">No projects yet. Create one to get started.</p>
+    <div v-else class="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-4">
       <ProjectCard v-for="project in projects" :key="project.id" :project="project" />
     </div>
   </div>
 </template>
-
-<style scoped>
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-h1 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-  gap: 0.75rem;
-}
-
-.muted {
-  color: var(--text-muted);
-}
-</style>

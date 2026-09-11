@@ -16,49 +16,19 @@ const percent = computed(() => Math.round(summary.progress * 100))
 </script>
 
 <template>
-  <div class="status">
-    <span class="label">{{ label }}</span>
-    <div class="bar">
-      <div class="fill" :style="{ width: `${percent}%` }" />
+  <div class="flex flex-col gap-1.5">
+    <div class="flex items-center gap-1.5 text-sm">
+      <UIcon name="i-lucide-flag" class="size-4 shrink-0 text-muted" />
+      <span class="truncate text-default" :title="label">{{ label }}</span>
     </div>
-    <span class="percent">{{ percent }}%</span>
+    <div class="flex items-center gap-2">
+      <UProgress
+        :model-value="percent"
+        size="sm"
+        :color="summary.isComplete ? 'success' : 'primary'"
+        class="flex-1"
+      />
+      <span class="w-9 shrink-0 text-right text-xs font-medium tabular-nums text-muted">{{ percent }}%</span>
+    </div>
   </div>
 </template>
-
-<style scoped>
-.status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-}
-
-.label {
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.bar {
-  flex: 1;
-  min-width: 4rem;
-  height: 0.4rem;
-  border-radius: 999px;
-  background: var(--border);
-  overflow: hidden;
-}
-
-.fill {
-  height: 100%;
-  background: var(--accent);
-  transition: width 0.2s ease;
-}
-
-.percent {
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  min-width: 2.5rem;
-  text-align: right;
-}
-</style>

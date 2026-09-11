@@ -1,4 +1,4 @@
 export default defineEventHandler(async event => {
   await requireAuth(event)
-  return fetchProjectSummaries()
+  return await fetchProjectSummaries()
 })

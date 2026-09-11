@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import Modal from './Modal.vue'
-
 const emit = defineEmits<{ created: [] }>()
 
 interface DraftTask { title: string }
@@ -202,289 +200,107 @@ async function create() {
 </script>
 
 <template>
-  <button type="button" class="primary" @click="launch">New project</button>
+  <UButton label="New project" icon="i-lucide-plus" @click="launch" />
 
-  <Modal v-if="open" @close="close">
-    <div class="wizard">
-      <div class="steps">
-        <span
-          v-for="key in stepOrder"
-          :key="key"
-          class="pill"
-          :class="{ active: step === key, done: stepOrder.indexOf(step) > stepOrder.indexOf(key) }"
-        >
-          {{ stepLabels[key] }}
-        </span>
-      </div>
+  <UModal v-model:open="open" title="New project">
+    <template #body>
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-wrap gap-1.5">
+          <UBadge
+            v-for="key in stepOrder"
+            :key="key"
+            :label="stepLabels[key]"
+            size="sm"
+            :variant="step === key ? 'solid' : 'subtle'"
+            :color="step === key ? 'primary' : 'neutral'"
+          />
+        </div>
 
-      <div v-if="step === 'basics'" class="body">
-        <p class="hint">What's the project, and what's it for?</p>
-        <label>
-          Project name
-          <input v-model="name" placeholder="Homelab Server Migration" autofocus />
-        </label>
-        <label>
-          Identifier
-          <input v-model="identifier" placeholder="HOMELABREFRESH" @input="identifierTouched = true" />
-        </label>
-        <label>
-          Overall goal
-          <textarea v-model="description" rows="3" placeholder="What is this project trying to accomplish?" />
-        </label>
-      </div>
+        <div v-if="step === 'basics'" class="flex min-h-40 flex-col gap-3">
+          <p class="text-sm text-muted">What's the project, and what's it for?</p>
+          <UFormField label="Project name">
+            <UInput v-model="name" placeholder="Homelab Server Migration" autofocus class="w-full" />
+          </UFormField>
+          <UFormField label="Identifier">
+            <UInput v-model="identifier" placeholder="HOMELABREFRESH" class="w-full" @input="identifierTouched = true" />
+          </UFormField>
+          <UFormField label="Overall goal">
+            <UTextarea v-model="description" :rows="3" placeholder="What is this project trying to accomplish?" class="w-full" />
+          </UFormField>
+        </div>
 
-      <div v-else-if="step === 'phases'" class="body">
-        <p class="hint">What are the major phases, in order? (e.g. "New NAS setup" -&gt; "Migrate data" -&gt; "Retire old NAS")</p>
-        <ol v-if="phases.length > 0" class="draft-list">
-          <li v-for="(phase, index) in phases" :key="index">
-            <span class="index">{{ index + 1 }}.</span>
-            <input v-model="phase.name" />
-            <button type="button" class="remove" @click="removePhase(index)">x</button>
-          </li>
-        </ol>
-        <form class="add-row" @submit.prevent="addPhase">
-          <input v-model="newPhaseName" placeholder="New phase name" />
-          <button type="submit">Add</button>
-        </form>
-      </div>
+        <div v-else-if="step === 'phases'" class="flex min-h-40 flex-col gap-3">
+          <p class="text-sm text-muted">What are the major phases, in order? (e.g. "New NAS setup" -&gt; "Migrate data" -&gt; "Retire old NAS")</p>
+          <ol v-if="phases.length > 0" class="flex flex-col gap-1.5">
+            <li v-for="(phase, index) in phases" :key="index" class="flex items-center gap-2">
+              <span class="w-5 text-sm text-muted">{{ index + 1 }}.</span>
+              <UInput v-model="phase.name" class="flex-1" />
+              <UButton icon="i-lucide-x" size="xs" color="neutral" variant="ghost" square @click="removePhase(index)" />
+            </li>
+          </ol>
+          <form class="flex gap-2" @submit.prevent="addPhase">
+            <UInput v-model="newPhaseName" placeholder="New phase name" class="flex-1" />
+            <UButton label="Add" type="submit" color="neutral" variant="outline" />
+          </form>
+        </div>
 
-      <div v-else-if="step === 'tasks' && currentPhase" class="body">
-        <p class="hint">
-          Phase {{ currentPhaseIndex + 1 }} of {{ phases.length }}: <strong>{{ currentPhase.name }}</strong>
-        </p>
-        <p class="hint">Add the ordered checklist for this phase (optional -- you can add tasks later too).</p>
-        <ol v-if="currentPhase.tasks.length > 0" class="draft-list">
-          <li v-for="(task, index) in currentPhase.tasks" :key="index">
-            <span class="index">{{ index + 1 }}.</span>
-            <input v-model="task.title" />
-            <button type="button" class="remove" @click="removeTask(index)">x</button>
-          </li>
-        </ol>
-        <form class="add-row" @submit.prevent="addTask">
-          <input v-model="newTaskTitle" placeholder="New task" />
-          <button type="submit">Add</button>
-        </form>
-      </div>
+        <div v-else-if="step === 'tasks' && currentPhase" class="flex min-h-40 flex-col gap-3">
+          <p class="text-sm text-muted">
+            Phase {{ currentPhaseIndex + 1 }} of {{ phases.length }}: <strong class="text-default">{{ currentPhase.name }}</strong>
+          </p>
+          <p class="text-sm text-muted">Add the ordered checklist for this phase (optional -- you can add tasks later too).</p>
+          <ol v-if="currentPhase.tasks.length > 0" class="flex flex-col gap-1.5">
+            <li v-for="(task, index) in currentPhase.tasks" :key="index" class="flex items-center gap-2">
+              <span class="w-5 text-sm text-muted">{{ index + 1 }}.</span>
+              <UInput v-model="task.title" class="flex-1" />
+              <UButton icon="i-lucide-x" size="xs" color="neutral" variant="ghost" square @click="removeTask(index)" />
+            </li>
+          </ol>
+          <form class="flex gap-2" @submit.prevent="addTask">
+            <UInput v-model="newTaskTitle" placeholder="New task" class="flex-1" />
+            <UButton label="Add" type="submit" color="neutral" variant="outline" />
+          </form>
+        </div>
 
-      <div v-else-if="step === 'events'" class="body">
-        <p class="hint">Is this project waiting on anything external? (optional -- e.g. a hardware delivery)</p>
-        <ol v-if="events.length > 0" class="draft-list">
-          <li v-for="(event, index) in events" :key="index">
-            <input type="date" v-model="event.expectedAt" />
-            <input v-model="event.title" placeholder="Event title" />
-            <button type="button" class="remove" @click="removeEvent(index)">x</button>
-          </li>
-        </ol>
-        <form class="add-row" @submit.prevent="addEvent">
-          <input type="date" v-model="newEventDate" />
-          <input v-model="newEventTitle" placeholder="New event" />
-          <button type="submit">Add</button>
-        </form>
-      </div>
+        <div v-else-if="step === 'events'" class="flex min-h-40 flex-col gap-3">
+          <p class="text-sm text-muted">Is this project waiting on anything external? (optional -- e.g. a hardware delivery)</p>
+          <ol v-if="events.length > 0" class="flex flex-col gap-1.5">
+            <li v-for="(event, index) in events" :key="index" class="flex items-center gap-2">
+              <UInput v-model="event.expectedAt" type="date" />
+              <UInput v-model="event.title" placeholder="Event title" class="flex-1" />
+              <UButton icon="i-lucide-x" size="xs" color="neutral" variant="ghost" square @click="removeEvent(index)" />
+            </li>
+          </ol>
+          <form class="flex gap-2" @submit.prevent="addEvent">
+            <UInput v-model="newEventDate" type="date" />
+            <UInput v-model="newEventTitle" placeholder="New event" class="flex-1" />
+            <UButton label="Add" type="submit" color="neutral" variant="outline" />
+          </form>
+        </div>
 
-      <div v-else-if="step === 'review'" class="body">
-        <p class="hint">Ready to create <strong>{{ name }}</strong>:</p>
-        <ul class="review-list">
-          <li v-for="(phase, index) in phases" :key="index">
-            {{ phase.name }} <span class="muted">({{ phase.tasks.length }} task{{ phase.tasks.length === 1 ? '' : 's' }})</span>
-          </li>
-          <li v-if="phases.length === 0" class="muted">No phases yet -- add them later.</li>
-        </ul>
-        <p v-if="events.length > 0" class="hint">Events: {{ events.map(e => e.title).join(', ') }}</p>
-        <p v-if="error" class="error">{{ error }}</p>
-      </div>
-
-      <div class="footer">
-        <button type="button" class="text" @click="close">Cancel</button>
-        <div class="nav">
-          <button type="button" :disabled="step === 'basics'" @click="goBack">Back</button>
-          <button v-if="step !== 'review'" type="button" class="primary" :disabled="!canProceed" @click="goNext">
-            Next
-          </button>
-          <button v-else type="button" class="primary" :disabled="submitting" @click="create">
-            {{ submitting ? 'Creating...' : 'Create project' }}
-          </button>
+        <div v-else-if="step === 'review'" class="flex min-h-40 flex-col gap-3">
+          <p class="text-sm text-muted">Ready to create <strong class="text-default">{{ name }}</strong>:</p>
+          <ul class="list-inside list-disc text-sm">
+            <li v-for="(phase, index) in phases" :key="index">
+              {{ phase.name }} <span class="text-muted">({{ phase.tasks.length }} task{{ phase.tasks.length === 1 ? '' : 's' }})</span>
+            </li>
+            <li v-if="phases.length === 0" class="text-muted">No phases yet -- add them later.</li>
+          </ul>
+          <p v-if="events.length > 0" class="text-sm text-muted">Events: {{ events.map(e => e.title).join(', ') }}</p>
+          <p v-if="error" class="text-sm text-error">{{ error }}</p>
         </div>
       </div>
-    </div>
-  </Modal>
+    </template>
+
+    <template #footer>
+      <div class="flex w-full items-center justify-between">
+        <UButton label="Cancel" color="neutral" variant="ghost" @click="close" />
+        <div class="flex gap-2">
+          <UButton label="Back" color="neutral" variant="outline" :disabled="step === 'basics'" @click="goBack" />
+          <UButton v-if="step !== 'review'" label="Next" :disabled="!canProceed" @click="goNext" />
+          <UButton v-else :label="submitting ? 'Creating...' : 'Create project'" :loading="submitting" @click="create" />
+        </div>
+      </div>
+    </template>
+  </UModal>
 </template>
-
-<style scoped>
-.primary {
-  padding: 0.35rem 0.7rem;
-  border: 1px solid var(--accent);
-  border-radius: 4px;
-  background: var(--accent);
-  color: white;
-  cursor: pointer;
-}
-
-.primary:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.wizard {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.steps {
-  display: flex;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-}
-
-.pill {
-  font-size: 0.7rem;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-}
-
-.pill.active {
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.pill.done {
-  color: var(--text);
-}
-
-.body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  min-height: 10rem;
-}
-
-.hint {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-input,
-textarea {
-  padding: 0.35rem 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.draft-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.draft-list li {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.draft-list .index {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  width: 1.2rem;
-}
-
-.draft-list input {
-  flex: 1;
-}
-
-.remove {
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0.1rem 0.3rem;
-}
-
-.remove:hover {
-  color: var(--danger);
-}
-
-.add-row {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.add-row input {
-  flex: 1;
-}
-
-.add-row button {
-  padding: 0.35rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  cursor: pointer;
-}
-
-.review-list {
-  margin: 0;
-  padding-left: 1.1rem;
-  font-size: 0.85rem;
-}
-
-.muted {
-  color: var(--text-muted);
-}
-
-.error {
-  color: var(--danger);
-  font-size: 0.85rem;
-}
-
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid var(--border);
-  padding-top: 0.75rem;
-}
-
-.footer .text {
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.nav {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.nav button:not(.primary) {
-  padding: 0.35rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  cursor: pointer;
-}
-
-.nav button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-</style>

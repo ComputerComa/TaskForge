@@ -1,13 +1,11 @@
-import { eq } from 'drizzle-orm'
 import { useDb } from '~~/server/db/client'
-import { projects } from '~~/server/db/schema'
 
 export default defineEventHandler(async event => {
   await requireAuth(event)
   const id = parseIdParam(event)
 
   const db = useDb()
-  const [deleted] = db.delete(projects).where(eq(projects.id, id)).returning().all()
+  const deleted = await db.project.delete({ where: { id } }).catch(() => null)
   if (!deleted) {
     throw createError({ statusCode: 404, statusMessage: 'Project not found' })
   }

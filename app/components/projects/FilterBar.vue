@@ -6,18 +6,9 @@ const uiApi = inject(projectUiKey)!
 
 <template>
   <div class="filters">
-    <label>
-      <input v-model="uiApi.filters.hideBlocked" type="checkbox" />
-      Hide blocked
-    </label>
-    <label>
-      <input v-model="uiApi.filters.actionableOnly" type="checkbox" />
-      Actionable only
-    </label>
-    <label>
-      <input v-model="uiApi.filters.showCompleted" type="checkbox" />
-      Show completed
-    </label>
+    <UCheckbox v-model="uiApi.filters.hideBlocked" label="Hide blocked" />
+    <UCheckbox v-model="uiApi.filters.actionableOnly" label="Actionable only" />
+    <UCheckbox v-model="uiApi.filters.showCompleted" label="Show completed" />
   </div>
 </template>
 
@@ -26,18 +17,5 @@ const uiApi = inject(projectUiKey)!
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-label {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  cursor: pointer;
-}
-
-input[type='checkbox'] {
-  cursor: pointer;
 }
 </style>

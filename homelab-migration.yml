@@ -1,0 +1,80 @@
+version: 1
+
+project:
+  identifier: HOMELABREFRESH
+  name: Homelab Server Migration
+  description: Migration from the current NAS and Hyve Zeus to two R730xd systems.
+
+columns:
+  - Backlog
+  - Ready
+  - Work in progress
+  - Waiting
+  - Done
+
+tasks:
+  - id: new-nas-setup
+    reference: NAS-001
+    title: Initial setup - new NAS
+    column: Ready
+    assignee: walker
+    description: |
+      Prepare and validate the new R730xd.
+
+      Documentation: https://trilium.example/...
+    subtasks:
+      - Verify installed hardware
+      - Update Dell firmware
+      - Install flex-bay SSDs
+      - Create mdadm RAID1
+      - Install Debian 13
+      - Configure 10Gb networking
+      - Run hardware burn-in
+      - Test Exos drives
+      - Create RAIDZ2 pool
+
+  - id: nas-migration
+    reference: NAS-002
+    title: Migrate current NAS to new NAS
+    column: Backlog
+    assignee: walker
+    depends_on:
+      - new-nas-setup
+    subtasks:
+      - Create destination datasets
+      - Configure permissions
+      - Run initial rclone transfer
+      - Capture final configuration backup
+      - Stop services on old NAS
+      - Run final synchronization
+      - Swap IP addresses
+      - Validate services
+
+  - id: proxmox-conversion
+    reference: PVE-001
+    title: Convert current NAS into Proxmox host
+    column: Backlog
+    assignee: walker
+    depends_on:
+      - nas-migration
+    subtasks:
+      - Replace storage controller
+      - Install flex-bay SSD mirror
+      - Install Proxmox
+      - Create SAS storage pool
+      - Configure networking
+      - Validate backups
+
+  - id: proxmox-migration
+    reference: PVE-002
+    title: Migrate Hyve Zeus workloads to R730xd
+    column: Backlog
+    assignee: walker
+    depends_on:
+      - proxmox-conversion
+    subtasks:
+      - Inventory existing guests
+      - Back up virtual machines
+      - Restore guests to R730xd
+      - Validate networking and storage
+      - Decommission Hyve Zeus

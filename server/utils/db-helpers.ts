@@ -1,6 +1,5 @@
-import { and, eq } from 'drizzle-orm'
 import { useDb } from '../db/client'
-import { events, phases, projects, tasks } from '../db/schema'
+import type { PhaseDisplayStatus } from '~~/shared/schemas/phase.schema'
 import type { ProjectStatusSummary } from '~~/shared/types/entities'
 
 function groupBy<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
@@ -21,6 +20,31 @@ export function isActiveBlocker(event: { type: string; status: string }): boolea
   return event.type === 'blocker' && event.status === 'upcoming'
 }
 
+/** A phase is complete once it's archived (archiving always counts as
+ * skip/done, even with unfinished tasks -- otherwise the phases after it
+ * would stay blocked forever), once every one of its tasks is done, or --
+ * for a phase with no tasks yet -- once its own status is 'done'. */
+export function isPhaseComplete(phase: { status: string; tasks: { status: string }[] }): boolean {
+  if (phase.status === 'archived') return true
+  return phase.tasks.length > 0 ? phase.tasks.every(task => task.status === 'done') : phase.status === 'done'
+}
+
+/** Exactly one phase is ever 'active' -- the first, in position order,
+ * that isn't complete (see isPhaseComplete). Every complete phase shows
+ * 'done' or 'archived'; every later incomplete phase shows 'pending'.
+ * This is what makes "only one Active phase at a time" true regardless
+ * of what raw status values happen to be stored. */
+export function computePhaseDisplayStatuses(
+  phasesInOrder: { status: string; tasks: { status: string }[] }[],
+): PhaseDisplayStatus[] {
+  const currentIndex = phasesInOrder.findIndex(phase => !isPhaseComplete(phase))
+  return phasesInOrder.map((phase, index) => {
+    if (phase.status === 'archived') return 'archived'
+    if (isPhaseComplete(phase)) return 'done'
+    return index === currentIndex ? 'active' : 'pending'
+  })
+}
+
 /** Derives the "Phase 2: on task 3 of 9" progress summary from phase/task
  * completion. Phases and tasks block purely sequentially by position, so
  * the "current" phase is simply the first one (in order) that isn't done
@@ -34,9 +58,6 @@ export function computeProjectStatus(
     (sum, phase) => sum + phase.tasks.filter(task => task.status === 'done').length,
     0,
   )
-
-  const isPhaseComplete = (phase: (typeof phasesInOrder)[number]) =>
-    phase.tasks.length > 0 ? phase.tasks.every(task => task.status === 'done') : phase.status === 'done'
 
   const currentIndex = phasesInOrder.findIndex(phase => !isPhaseComplete(phase))
   const allComplete = currentIndex === -1
@@ -64,12 +85,12 @@ export function computeProjectStatus(
   }
 }
 
-export function fetchProjectSummaries() {
+export async function fetchProjectSummaries() {
   const db = useDb()
-  const allProjects = db.select().from(projects).all()
-  const allPhases = db.select().from(phases).orderBy(phases.position).all()
-  const allTasks = db.select().from(tasks).all()
-  const allEvents = db.select().from(events).all()
+  const [allProjects, allPhases, allTasks, allEvents] = await Promise.all([
+    db.project.findMany(), db.phase.findMany({ orderBy: { position: 'asc' } }),
+    db.task.findMany(), db.event.findMany(),
+  ])
 
   const phasesByProject = groupBy(allPhases, phase => phase.projectId)
   const tasksByPhase = groupBy(allTasks, task => task.phaseId)
@@ -102,30 +123,16 @@ export function fetchProjectSummaries() {
  * ancestor scope -- a project-level blocker blocks every phase and task,
  * a phase-level blocker blocks all of that phase's tasks). Used by the
  * Project Detail view. Returns null if the project doesn't exist. */
-export function fetchProjectTree(projectId: number) {
+export async function fetchProjectTree(projectId: number) {
   const db = useDb()
-  const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+  const project = await db.project.findUnique({ where: { id: projectId } })
   if (!project) return null
 
-  const projectPhases = db
-    .select()
-    .from(phases)
-    .where(eq(phases.projectId, projectId))
-    .orderBy(phases.position)
-    .all()
+  const projectPhases = await db.phase.findMany({ where: { projectId }, orderBy: { position: 'asc' } })
 
-  const projectTasks = db
-    .select()
-    .from(tasks)
-    .where(eq(tasks.projectId, projectId))
-    .orderBy(tasks.position)
-    .all()
+  const projectTasks = await db.task.findMany({ where: { projectId }, orderBy: { position: 'asc' } })
 
-  const projectEvents = db
-    .select()
-    .from(events)
-    .where(eq(events.projectId, projectId))
-    .all()
+  const projectEvents = (await db.event.findMany({ where: { projectId } }))
     .sort((a, b) => (a.expectedAt?.getTime() ?? Infinity) - (b.expectedAt?.getTime() ?? Infinity))
 
   const tasksByPhase = groupBy(projectTasks, task => task.phaseId)
@@ -153,10 +160,15 @@ export function fetchProjectTree(projectId: number) {
   const statusSummary = computeProjectStatus(
     phaseNodes.map(phase => ({ name: phase.name, status: phase.status, tasks: phase.tasks })),
   )
+  const displayStatuses = computePhaseDisplayStatuses(phaseNodes)
+  const phaseNodesWithDisplayStatus = phaseNodes.map((phase, index) => ({
+    ...phase,
+    displayStatus: displayStatuses[index],
+  }))
 
   return {
     ...project,
-    phases: phaseNodes,
+    phases: phaseNodesWithDisplayStatus,
     events: projectEvents,
     statusSummary,
     blockers: projectBlockers,
@@ -166,7 +178,7 @@ export function fetchProjectTree(projectId: number) {
 /** Throws a 400/404 H3Error if (scopeType, scopeId) isn't a valid target
  * within `projectId` -- Zod alone can't check this since it needs the DB.
  * Called from the events create/update handlers. */
-export function assertValidEventScope(projectId: number, scopeType: string, scopeId: number) {
+export async function assertValidEventScope(projectId: number, scopeType: string, scopeId: number) {
   const db = useDb()
 
   if (scopeType === 'project') {
@@ -180,11 +192,7 @@ export function assertValidEventScope(projectId: number, scopeType: string, scop
   }
 
   if (scopeType === 'phase') {
-    const phase = db
-      .select({ id: phases.id })
-      .from(phases)
-      .where(and(eq(phases.id, scopeId), eq(phases.projectId, projectId)))
-      .get()
+    const phase = await db.phase.findFirst({ where: { id: scopeId, projectId }, select: { id: true } })
     if (!phase) {
       throw createError({ statusCode: 404, statusMessage: 'Phase not found in this project' })
     }
@@ -192,11 +200,7 @@ export function assertValidEventScope(projectId: number, scopeType: string, scop
   }
 
   if (scopeType === 'task') {
-    const task = db
-      .select({ id: tasks.id })
-      .from(tasks)
-      .where(and(eq(tasks.id, scopeId), eq(tasks.projectId, projectId)))
-      .get()
+    const task = await db.task.findFirst({ where: { id: scopeId, projectId }, select: { id: true } })
     if (!task) {
       throw createError({ statusCode: 404, statusMessage: 'Task not found in this project' })
     }
@@ -207,12 +211,9 @@ export function assertValidEventScope(projectId: number, scopeType: string, scop
  * otherwise be orphaned (their scopeId would point at nothing) -- demote
  * them to project scope instead of losing them. Called before deleting a
  * phase (which cascades its tasks) or a task. */
-export function demoteEventScope(projectId: number, scopeType: 'phase' | 'task', scopeId: number) {
+export async function demoteEventScope(projectId: number, scopeType: 'phase' | 'task', scopeId: number) {
   const db = useDb()
-  db.update(events)
-    .set({ scopeType: 'project', scopeId: projectId })
-    .where(and(eq(events.scopeType, scopeType), eq(events.scopeId, scopeId)))
-    .run()
+  await db.event.updateMany({ where: { scopeType, scopeId }, data: { scopeType: 'project', scopeId: projectId } })
 }
 
 export function nextPosition(rows: { position: number }[]): number {
@@ -225,7 +226,7 @@ export function runUnique<T>(write: () => T, conflictMessage: string): T {
   try {
     return write()
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       throw createError({ statusCode: 409, statusMessage: conflictMessage })
     }
     throw error
