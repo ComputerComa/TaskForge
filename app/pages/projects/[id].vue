@@ -21,6 +21,10 @@ provide(projectUiKey, uiApi)
 
 const { tree, pending, error } = treeApi
 
+// Falls back to something sensible while the tree is still loading (or
+// failed to load) rather than showing a blank/stale title in that window.
+useHead({ title: () => tree.value?.name ?? 'Project' })
+
 const { exportProject } = useExportProject()
 </script>
 

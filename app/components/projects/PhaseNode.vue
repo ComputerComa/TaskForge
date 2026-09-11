@@ -7,16 +7,13 @@ import TaskNode from './TaskNode.vue'
 import type { PhaseDisplayStatus } from '~~/shared/schemas/phase.schema'
 import type { PhaseNode as PhaseNodeType } from '~~/shared/types/entities'
 
-const { phase, isCurrentPhase, canMoveUp, canMoveDown } = defineProps<{
+const { phase, isCurrentPhase } = defineProps<{
   phase: PhaseNodeType
   // Whether this is the project's current phase (the first, in order,
   // that isn't done) -- only it can have an "up next" task; every later
   // phase is waiting on it regardless of its own tasks' statuses.
   isCurrentPhase: boolean
-  canMoveUp: boolean
-  canMoveDown: boolean
 }>()
-defineEmits<{ 'move-up': []; 'move-down': [] }>()
 
 const treeApi = inject(projectTreeKey)!
 const uiApi = inject(projectUiKey)!
@@ -70,13 +67,6 @@ function remove() {
   if (phase.tasks.length > 0 && !confirm(`Delete phase "${phase.name}" and its ${phase.tasks.length} task(s)?`)) return
   treeApi.deletePhase(phase.id)
 }
-
-function moveTask(index: number, direction: -1 | 1) {
-  const target = phase.tasks[index + direction]
-  const current = phase.tasks[index]
-  if (!target || !current) return
-  treeApi.swapPositions('task', current, target)
-}
 </script>
 
 <template>
@@ -117,10 +107,6 @@ function moveTask(index: number, direction: -1 | 1) {
       <span class="task-count">{{ doneCount }}/{{ phase.tasks.length }} done</span>
       <BlockedBadge :blockers="phase.blockers" />
       <div class="spacer" />
-      <div class="reorder">
-        <UButton icon="i-lucide-chevron-up" title="Move up" color="neutral" variant="ghost" size="xs" square :disabled="!canMoveUp" @click="$emit('move-up')" />
-        <UButton icon="i-lucide-chevron-down" title="Move down" color="neutral" variant="ghost" size="xs" square :disabled="!canMoveDown" @click="$emit('move-down')" />
-      </div>
       <UButton icon="i-lucide-trash-2" label="Delete" color="error" variant="ghost" size="xs" @click="remove" />
     </div>
 
@@ -140,10 +126,6 @@ function moveTask(index: number, direction: -1 | 1) {
           :key="task.id"
           :task="task"
           :is-current="index === firstPendingIndex"
-          :can-move-up="index > 0"
-          :can-move-down="index < phase.tasks.length - 1"
-          @move-up="moveTask(index, -1)"
-          @move-down="moveTask(index, 1)"
         />
 
         <UButton
@@ -178,12 +160,6 @@ function moveTask(index: number, direction: -1 | 1) {
 
 .spacer {
   flex: 1;
-}
-
-.reorder {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
 }
 
 .name {
