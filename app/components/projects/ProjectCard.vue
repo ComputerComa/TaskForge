@@ -13,9 +13,11 @@ const statusColor: Record<ProjectStatus, 'primary' | 'success' | 'warning' | 'ne
   archived: 'neutral',
 }
 
+const { exportProject } = useExportProject()
+
 function formatEventDate(value: string | null) {
   if (!value) return null
-  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 </script>
 
@@ -27,14 +29,25 @@ function formatEventDate(value: string | null) {
       :ui="{ body: 'flex flex-col gap-3' }"
     >
       <div class="flex items-start justify-between gap-2">
-        <h2 class="truncate font-semibold text-default">{{ project.name }}</h2>
-        <UBadge
-          :label="project.status.replace('_', ' ')"
-          :color="statusColor[project.status]"
-          variant="subtle"
-          size="sm"
-          class="shrink-0 capitalize"
-        />
+        <h2 class="min-w-0 truncate font-semibold text-default">{{ project.name }}</h2>
+        <div class="flex shrink-0 items-center gap-1">
+          <UBadge
+            :label="project.status.replace('_', ' ')"
+            :color="statusColor[project.status]"
+            variant="subtle"
+            size="sm"
+            class="capitalize"
+          />
+          <UButton
+            icon="i-lucide-download"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            square
+            title="Export project"
+            @click.stop.prevent="exportProject(project.id, project.identifier)"
+          />
+        </div>
       </div>
 
       <BlockedBadge :blockers="project.blockers" />

@@ -19,7 +19,7 @@ const sorted = computed(() =>
 
 function formatDate(value: string | null) {
   if (!value) return null
-  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 /** Expands the event's containing phase (if collapsed) and scrolls the

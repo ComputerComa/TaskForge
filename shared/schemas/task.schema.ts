@@ -14,6 +14,7 @@ export const createTaskSchema = z
     command: z.string().optional(),
     notes: z.string().optional(),
     link: z.string().optional(),
+    reference: z.string().optional(),
   })
   .strict()
 

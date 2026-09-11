@@ -54,6 +54,7 @@ model Task {
   command String?
   notes String?
   link String?
+  reference String?
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   phase Phase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
   events Event[]

@@ -8,6 +8,7 @@ import EventRail from '~/components/projects/EventRail.vue'
 import FilterBar from '~/components/projects/FilterBar.vue'
 import BlockedBadge from '~/components/projects/BlockedBadge.vue'
 import EventList from '~/components/projects/EventList.vue'
+import AddItemMenu from '~/components/projects/AddItemMenu.vue'
 
 const route = useRoute()
 const projectId = Number(route.params.id)
@@ -19,11 +20,24 @@ const uiApi = useProjectDetailUi()
 provide(projectUiKey, uiApi)
 
 const { tree, pending, error } = treeApi
+
+const { exportProject } = useExportProject()
 </script>
 
 <template>
   <div class="page">
-    <UButton to="/" label="Projects" icon="i-lucide-arrow-left" color="neutral" variant="link" size="sm" class="back" />
+    <div class="flex items-center justify-between">
+      <UButton to="/" label="Projects" icon="i-lucide-arrow-left" color="neutral" variant="link" size="sm" class="back" />
+      <UButton
+        v-if="tree"
+        label="Export"
+        icon="i-lucide-download"
+        color="neutral"
+        variant="outline"
+        size="sm"
+        @click="exportProject(tree.id, tree.identifier)"
+      />
+    </div>
 
     <p v-if="pending" class="muted">Loading...</p>
     <p v-else-if="error" class="muted">Could not load this project.</p>
@@ -35,7 +49,10 @@ const { tree, pending, error } = treeApi
       </div>
 
       <EventRail :events="tree.events" :tree="tree" />
-      <FilterBar />
+      <div class="toolbar">
+        <FilterBar />
+        <AddItemMenu :tree="tree" />
+      </div>
       <PhaseTree :phases="tree.phases" />
       <EventList :tree="tree" />
     </template>
@@ -62,5 +79,13 @@ const { tree, pending, error } = treeApi
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 </style>

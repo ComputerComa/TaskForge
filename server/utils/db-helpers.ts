@@ -1,4 +1,5 @@
 import { useDb } from '../db/client'
+import type { PhaseDisplayStatus } from '~~/shared/schemas/phase.schema'
 import type { ProjectStatusSummary } from '~~/shared/types/entities'
 
 function groupBy<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
@@ -19,6 +20,31 @@ export function isActiveBlocker(event: { type: string; status: string }): boolea
   return event.type === 'blocker' && event.status === 'upcoming'
 }
 
+/** A phase is complete once it's archived (archiving always counts as
+ * skip/done, even with unfinished tasks -- otherwise the phases after it
+ * would stay blocked forever), once every one of its tasks is done, or --
+ * for a phase with no tasks yet -- once its own status is 'done'. */
+export function isPhaseComplete(phase: { status: string; tasks: { status: string }[] }): boolean {
+  if (phase.status === 'archived') return true
+  return phase.tasks.length > 0 ? phase.tasks.every(task => task.status === 'done') : phase.status === 'done'
+}
+
+/** Exactly one phase is ever 'active' -- the first, in position order,
+ * that isn't complete (see isPhaseComplete). Every complete phase shows
+ * 'done' or 'archived'; every later incomplete phase shows 'pending'.
+ * This is what makes "only one Active phase at a time" true regardless
+ * of what raw status values happen to be stored. */
+export function computePhaseDisplayStatuses(
+  phasesInOrder: { status: string; tasks: { status: string }[] }[],
+): PhaseDisplayStatus[] {
+  const currentIndex = phasesInOrder.findIndex(phase => !isPhaseComplete(phase))
+  return phasesInOrder.map((phase, index) => {
+    if (phase.status === 'archived') return 'archived'
+    if (isPhaseComplete(phase)) return 'done'
+    return index === currentIndex ? 'active' : 'pending'
+  })
+}
+
 /** Derives the "Phase 2: on task 3 of 9" progress summary from phase/task
  * completion. Phases and tasks block purely sequentially by position, so
  * the "current" phase is simply the first one (in order) that isn't done
@@ -32,9 +58,6 @@ export function computeProjectStatus(
     (sum, phase) => sum + phase.tasks.filter(task => task.status === 'done').length,
     0,
   )
-
-  const isPhaseComplete = (phase: (typeof phasesInOrder)[number]) =>
-    phase.tasks.length > 0 ? phase.tasks.every(task => task.status === 'done') : phase.status === 'done'
 
   const currentIndex = phasesInOrder.findIndex(phase => !isPhaseComplete(phase))
   const allComplete = currentIndex === -1
@@ -137,10 +160,15 @@ export async function fetchProjectTree(projectId: number) {
   const statusSummary = computeProjectStatus(
     phaseNodes.map(phase => ({ name: phase.name, status: phase.status, tasks: phase.tasks })),
   )
+  const displayStatuses = computePhaseDisplayStatuses(phaseNodes)
+  const phaseNodesWithDisplayStatus = phaseNodes.map((phase, index) => ({
+    ...phase,
+    displayStatus: displayStatuses[index],
+  }))
 
   return {
     ...project,
-    phases: phaseNodes,
+    phases: phaseNodesWithDisplayStatus,
     events: projectEvents,
     statusSummary,
     blockers: projectBlockers,
