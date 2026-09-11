@@ -10,7 +10,10 @@ async function logout() {
 <template>
   <div class="shell">
     <header class="topbar">
-      <NuxtLink to="/" class="brand">TaskForge</NuxtLink>
+      <NuxtLink to="/" class="brand">
+        <UIcon name="i-lucide-anvil" class="size-5" />
+        TaskForge
+      </NuxtLink>
       <div class="spacer" />
       <span v-if="user" class="username">{{ user.username }}</span>
       <UButton label="Log out" color="neutral" variant="link" size="sm" @click="logout" />
@@ -104,6 +107,9 @@ a {
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-weight: 600;
   text-decoration: none;
   color: var(--text);

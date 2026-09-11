@@ -1,6 +1,8 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'blank' })
 
+useHead({ title: 'Log in' })
+
 const { fetch: refreshSession } = useUserSession()
 
 const username = ref('')

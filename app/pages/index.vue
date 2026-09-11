@@ -4,6 +4,8 @@ import ImportProjectModal from '~/components/projects/ImportProjectModal.vue'
 import ProjectCard from '~/components/projects/ProjectCard.vue'
 import type { ProjectSummary } from '~~/shared/types/entities'
 
+useHead({ title: 'Dashboard' })
+
 // useRequestFetch forwards the incoming request's cookies during SSR --
 // see the comment in useProjectTree.ts for why this matters.
 const requestFetch = useRequestFetch()
