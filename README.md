@@ -18,10 +18,17 @@ cp .env.example .env
 # and ADMIN_USERNAME for the one local account this app supports.
 
 npm run db:migrate
-npm run db:seed   # creates the admin user with a generated password
+npm run db:generate   # regenerate Prisma Client -- needed after every schema change, not just the first install
+npm run db:seed       # creates the admin user with a generated password
 
 npm run dev
 ```
+
+If you pull schema changes into an existing clone, re-run `db:migrate` and
+`db:generate` and restart `npm run dev` -- `db:migrate` alone won't update
+the generated Prisma Client, and the dev server caches the old one in
+memory until it's restarted (this is what a `Cannot read properties of
+undefined (reading 'findMany')` error usually means).
 
 There is no signup flow. `db:seed` is the only way an account gets created,
 and it no-ops if a user already exists.
