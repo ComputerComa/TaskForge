@@ -18,13 +18,26 @@ cp .env.example .env
 # and ADMIN_USERNAME for the one local account this app supports.
 
 npm run db:migrate
-npm run db:seed   # creates the admin user with a generated password
+npm run db:generate   # regenerate Prisma Client -- needed after every schema change, not just the first install
+npm run db:seed       # creates the admin user with a generated password
 
 npm run dev
 ```
 
+If you pull schema changes into an existing clone, re-run `db:migrate` and
+`db:generate` and restart `npm run dev` -- `db:migrate` alone won't update
+the generated Prisma Client, and the dev server caches the old one in
+memory until it's restarted (this is what a `Cannot read properties of
+undefined (reading 'findMany')` error usually means).
+
 There is no signup flow. `db:seed` is the only way an account gets created,
 and it no-ops if a user already exists.
+
+`npm run dev` binds to `0.0.0.0` (all interfaces), not just `localhost` --
+needed so a reverse proxy or another device on the network can reach it,
+which matters once remote MCP clients are in the picture (see below). If
+you're running this somewhere network-exposed, put a reverse proxy with
+TLS in front of it rather than exposing the dev server directly.
 
 ## Scripts
 
@@ -33,6 +46,30 @@ and it no-ops if a user already exists.
 - `npm run db:migrate` -- apply pending Prisma migrations.
 - `npm run db:seed` -- create the admin user from `ADMIN_USERNAME`/`ADMIN_PASSWORD`.
 - `npm run typecheck` -- `nuxt typecheck` across the whole app.
+
+## MCP (Claude / ChatGPT access)
+
+TaskForge exposes an MCP endpoint at `/mcp` so an assistant can read and
+manage your projects directly -- list/get/export projects, create and
+update phases/tasks/events, mark tasks done, resolve blockers, and more
+(see `server/utils/mcp-server.ts` for the full tool list).
+
+It's authenticated with a bearer token, separate from your login session:
+
+1. Log in to TaskForge and open **Settings** (gear icon, top right).
+2. Under "MCP access tokens", click **New token**, name it (e.g. "Claude"),
+   and copy the token shown -- it's shown exactly once.
+3. Add TaskForge as a custom connector, pointing it at
+   `https://<your-taskforge-host>/mcp`:
+   - **Claude.ai**: Settings -> Connectors -> Add custom connector. Use the
+     static header option (`Authorization: Bearer <token>`) rather than OAuth.
+   - **ChatGPT**: Settings -> Apps -> Advanced -> Developer mode -> Connectors
+     -> Create, with "Token" auth and the same header.
+
+There's no OAuth authorization server behind this -- just a static,
+revocable credential per client, checked on every request to `/mcp`. Revoke
+a token any time from the Settings page; it takes effect immediately.
+Since the token is a plain bearer credential, only expose `/mcp` over HTTPS.
 
 ## What's built
 

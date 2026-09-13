@@ -18,6 +18,17 @@ export interface ProjectStatusSummary {
   isComplete: boolean
 }
 
+// Everything about a stored token safe to send to the browser -- notably
+// never the hash, and never the raw token except once, right after
+// creation (see server/api/tokens/index.post.ts).
+export interface ApiTokenSummary {
+  id: number
+  name: string
+  tokenPrefix: string
+  createdAt: string
+  lastUsedAt: string | null
+}
+
 export interface EventSummary {
   id: number
   projectId: number

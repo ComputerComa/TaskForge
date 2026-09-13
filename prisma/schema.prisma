@@ -15,6 +15,25 @@ model User {
   @@map("users")
 }
 
+// A long-lived bearer credential for the MCP endpoint (server/routes/mcp.ts)
+// only -- the web app itself still authenticates purely via the session
+// cookie set by POST /api/auth/login. Multiple tokens are supported (one
+// per MCP client) so any one of them can be revoked independently; there's
+// no userId FK since the app supports exactly one account (see User).
+model ApiToken {
+  id Int @id @default(autoincrement())
+  name String
+  // First chars of the full token, stored in the clear so lookup doesn't
+  // require hashing every row on every request -- see server/utils/api-tokens.ts.
+  // Not a secret by itself; the hash below is what's actually checked.
+  tokenPrefix String @map("token_prefix")
+  tokenHash String @map("token_hash")
+  createdAt DateTime @default(now()) @map("created_at")
+  lastUsedAt DateTime? @map("last_used_at")
+  @@index([tokenPrefix])
+  @@map("api_tokens")
+}
+
 model Project {
   id Int @id @default(autoincrement())
   identifier String @unique

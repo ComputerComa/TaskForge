@@ -16,6 +16,15 @@ async function logout() {
       </NuxtLink>
       <div class="spacer" />
       <span v-if="user" class="username">{{ user.username }}</span>
+      <UButton
+        icon="i-lucide-settings"
+        to="/settings"
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        square
+        title="Settings"
+      />
       <UButton label="Log out" color="neutral" variant="link" size="sm" @click="logout" />
     </header>
     <main class="content">

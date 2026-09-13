@@ -3,6 +3,15 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
+  // Vite's dev server (which `nuxt dev` wraps) binds to localhost only by
+  // default, unreachable from outside the host it runs on -- fine when
+  // only the browser on that machine talked to it, but not now that
+  // remote MCP clients (and/or a reverse proxy in front of them) need a
+  // path in. `npm run preview` and a production build aren't affected by
+  // this setting -- Nitro's own server already binds all interfaces
+  // there unless HOST is explicitly set to something narrower.
+  devServer: { host: '0.0.0.0' },
+
   app: {
     head: {
       title: 'TaskForge',
