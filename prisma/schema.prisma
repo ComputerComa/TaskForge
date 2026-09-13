@@ -11,8 +11,57 @@ model User {
   id Int @id @default(autoincrement())
   username String @unique
   passwordHash String @map("password_hash")
+  name String
+  email String
   createdAt DateTime @default(now()) @map("created_at")
+
+  // TOTP -- one authenticator enrollment at a time, matching how every
+  // authenticator app models it. totpEnabledAt stays null while a scanned
+  // QR hasn't yet been confirmed with a code, so a half-finished
+  // enrollment never silently counts as "2FA enabled" (see totp/confirm).
+  totpSecret String? @map("totp_secret")
+  totpEnabledAt DateTime? @map("totp_enabled_at")
+
+  webauthnCredentials WebauthnCredential[]
+  recoveryCodes RecoveryCode[]
   @@map("users")
+}
+
+model WebauthnCredential {
+  id Int @id @default(autoincrement())
+  userId Int @map("user_id")
+  credentialId String @unique @map("credential_id")
+  // Already base64url-encoded by @simplewebauthn/server's own success
+  // callback -- stored as-is, never raw bytes.
+  publicKey String @map("public_key")
+  counter Int @default(0)
+  backedUp Boolean @default(false) @map("backed_up")
+  transports String[] @default([])
+  aaguid String?
+  // User-chosen label, e.g. "MacBook Touch ID" -- shown in Settings so
+  // multiple passkeys can be told apart.
+  name String
+  createdAt DateTime @default(now()) @map("created_at")
+  lastUsedAt DateTime? @map("last_used_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("webauthn_credentials")
+}
+
+// Single-use fallback codes for when neither TOTP nor a passkey is
+// available. A dedicated table (not a JSON column on User) so one code
+// can be deleted/marked used independently -- same shape as ApiToken's
+// hashed-secret pattern, reusing hashPassword/verifyPassword rather than
+// a new hashing primitive.
+model RecoveryCode {
+  id Int @id @default(autoincrement())
+  userId Int @map("user_id")
+  codeHash String @map("code_hash")
+  usedAt DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("recovery_codes")
 }
 
 // A long-lived bearer credential for the MCP endpoint (server/routes/mcp.ts)

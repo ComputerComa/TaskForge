@@ -10,17 +10,20 @@
     "postinstall": "nuxt prepare",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "tsx server/db/seed.ts",
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
-    "@adonisjs/hash": "^9.1.1",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@nuxt/ui": "^4.11.1",
     "@prisma/client": "^6.16.2",
+    "@simplewebauthn/browser": "^11.0.0",
+    "@simplewebauthn/server": "^11.0.0",
+    "@simplewebauthn/types": "^11.0.0",
     "dotenv": "^17.4.2",
     "nuxt": "^4.5.2",
     "nuxt-auth-utils": "^0.5.30",
+    "otpauth": "^9.5.2",
+    "qrcode": "^1.5.4",
     "vue": "^3.5.42",
     "vue-router": "^5.3.1",
     "zod": "^4.6.1"
@@ -28,10 +31,10 @@
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.130",
     "@types/node": "^24.3.0",
+    "@types/qrcode": "^1.5.6",
     "@vueuse/core": "^14.4.0",
     "@vueuse/nuxt": "^14.4.0",
     "prisma": "^6.16.2",
-    "tsx": "^4.23.13",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.3.11"
   },

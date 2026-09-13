@@ -15,23 +15,24 @@ for the full design and roadmap.
 npm install
 cp .env.example .env
 # Edit .env: set NUXT_SESSION_PASSWORD (32+ chars, e.g. `openssl rand -base64 32`)
-# and ADMIN_USERNAME for the one local account this app supports.
 
 npm run db:migrate
 npm run db:generate   # regenerate Prisma Client -- needed after every schema change, not just the first install
-npm run db:seed       # creates the admin user with a generated password
 
 npm run dev
 ```
+
+Then visit the app in a browser -- with no account yet, it shows a
+first-run setup wizard (name, email, a password you choose, and
+optional two-factor authentication) instead of the login page. That's
+the only way to create the one account this app supports; once it
+exists, the wizard won't run again and everyone lands on `/login`.
 
 If you pull schema changes into an existing clone, re-run `db:migrate` and
 `db:generate` and restart `npm run dev` -- `db:migrate` alone won't update
 the generated Prisma Client, and the dev server caches the old one in
 memory until it's restarted (this is what a `Cannot read properties of
 undefined (reading 'findMany')` error usually means).
-
-There is no signup flow. `db:seed` is the only way an account gets created,
-and it no-ops if a user already exists.
 
 `npm run dev` binds to `0.0.0.0` (all interfaces), not just `localhost` --
 needed so a reverse proxy or another device on the network can reach it,
@@ -44,7 +45,6 @@ TLS in front of it rather than exposing the dev server directly.
 - `npm run dev` / `build` / `preview` -- standard Nuxt commands.
 - `npm run db:generate` -- generate Prisma Client from the supplied `prisma/schema.prisma`.
 - `npm run db:migrate` -- apply pending Prisma migrations.
-- `npm run db:seed` -- create the admin user from `ADMIN_USERNAME`/`ADMIN_PASSWORD`.
 - `npm run typecheck` -- `nuxt typecheck` across the whole app.
 
 ## MCP (Claude / ChatGPT access)
@@ -73,7 +73,9 @@ Since the token is a plain bearer credential, only expose `/mcp` over HTTPS.
 
 ## What's built
 
-Auth (local username/password, session cookie), full CRUD for
+Auth (local username/password, session cookie, optional TOTP or passkey
+two-factor with one-time recovery codes, first-run setup wizard instead
+of a CLI seed script), full CRUD for
 projects/phases/tasks/events, a computed status/progress summary derived
 from task completion, a dashboard of project cards, a guided modal wizard
 for creating new projects, and a project detail page: collapsible phases,

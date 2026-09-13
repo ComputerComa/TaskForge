@@ -30,6 +30,13 @@ export default defineNuxtConfig({
 
   modules: ['nuxt-auth-utils', '@vueuse/nuxt', '@nuxt/ui'],
 
+  // Enables nuxt-auth-utils' built-in WebAuthn/passkey support --
+  // defineWebAuthnRegisterEventHandler/defineWebAuthnAuthenticateEventHandler
+  // server helpers and the useWebAuthn() client composable. Requires
+  // @simplewebauthn/server + @simplewebauthn/browser to be installed (they
+  // are); without this flag the module never registers that runtime code.
+  auth: { webAuthn: true },
+
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
