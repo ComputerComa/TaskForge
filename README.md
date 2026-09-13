@@ -33,6 +33,12 @@ undefined (reading 'findMany')` error usually means).
 There is no signup flow. `db:seed` is the only way an account gets created,
 and it no-ops if a user already exists.
 
+`npm run dev` binds to `0.0.0.0` (all interfaces), not just `localhost` --
+needed so a reverse proxy or another device on the network can reach it,
+which matters once remote MCP clients are in the picture (see below). If
+you're running this somewhere network-exposed, put a reverse proxy with
+TLS in front of it rather than exposing the dev server directly.
+
 ## Scripts
 
 - `npm run dev` / `build` / `preview` -- standard Nuxt commands.
