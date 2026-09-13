@@ -15,9 +15,10 @@
   },
   "dependencies": {
     "@adonisjs/hash": "^9.1.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@nuxt/ui": "^4.11.1",
-    "dotenv": "^17.4.2",
     "@prisma/client": "^6.16.2",
+    "dotenv": "^17.4.2",
     "nuxt": "^4.5.2",
     "nuxt-auth-utils": "^0.5.30",
     "vue": "^3.5.42",
@@ -26,9 +27,9 @@
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.130",
+    "@types/node": "^24.3.0",
     "@vueuse/core": "^14.4.0",
     "@vueuse/nuxt": "^14.4.0",
-    "@types/node": "^24.3.0",
     "prisma": "^6.16.2",
     "tsx": "^4.23.13",
     "typescript": "^5.9.3",
